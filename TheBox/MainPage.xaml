@@ -1,0 +1,21 @@
+﻿<Page
+    x:Class="TheBox.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:TheBox"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <TextBlock x:Name="currentAverageBlock" VerticalAlignment="Bottom" Foreground="Black"></TextBlock>
+        <TextBlock x:Name="lastBeatBlock" VerticalAlignment="Bottom" Foreground="Black" Margin="0,0,0,20"></TextBlock>
+        <TextBlock x:Name="timeBetweenBeatsBlock" VerticalAlignment="Bottom" Foreground="Black" Margin="0,0,0,40"></TextBlock>
+        <TextBlock x:Name="beatValueBlock" VerticalAlignment="Bottom" Foreground="Black" Margin="0,0,0,60"></TextBlock>
+        <Rectangle x:Name="leftPositiveRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,50,0" Fill="CornflowerBlue"></Rectangle>
+        <Rectangle x:Name="leftNegativeRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,50,0" Fill="CornflowerBlue"></Rectangle>
+        <Rectangle x:Name="rightPositiveRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="50,0,0,0" Fill="CornflowerBlue"></Rectangle>
+        <Rectangle x:Name="rightNegativeRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="50,100,0,0" Fill="CornflowerBlue"></Rectangle>
+        <MediaElement x:Name="mediaElement"></MediaElement>
+    </Grid>
+</Page>
