@@ -43,6 +43,25 @@ namespace TheBox
         public Face left;
         public Face top;
 
+        private byte brightness;
+        public byte Brightness
+        {
+            get
+            {
+                return brightness;
+            }
+            set
+            {
+                brightness = value;
+                bottom.Brightness = value;
+                front.Brightness = value;
+                right.Brightness = value;
+                back.Brightness = value;
+                left.Brightness = value;
+                top.Brightness = value;
+            }
+        }
+
         public Cube(DotStarStrip leftStrip, DotStarStrip rightStrip)
         {
             this.leftStrip = leftStrip;
@@ -71,11 +90,23 @@ namespace TheBox
             back = new Face(backTopEdge, leftLeftEdge, bottomBackEdge, backLeftEdge);
             left = new Face(leftTopEdge, frontLeftEdge, bottomLeftEdge, leftLeftEdge);
             top = new Face(frontTopEdge, rightTopEdge, backTopEdge, leftTopEdge);
+
+            brightness = 255;
         }
 
         public void SetEdgeColor(Edge edge, Color color)
         {
             edge.SetColor(color);
+        }
+
+        public void SetColor(Color color)
+        {
+            bottom.SetColor(color);
+            front.SetColor(color);
+            right.SetColor(color);
+            back.SetColor(color);
+            left.SetColor(color);
+            top.SetColor(color);
         }
 
         public void Reset()

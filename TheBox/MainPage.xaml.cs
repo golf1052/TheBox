@@ -138,8 +138,63 @@ namespace TheBox
             outputNode.Start();
             inputNode.Start();
             frameOutputNode.Start();
-            //await RainbowTest();
-            await FlashTest();
+            await RainbowTest();
+            //cube.Brightness = 30;
+            //await FlashTest();
+            //SetAll();
+            //await FadeTest();
+            //cube.Reset();
+            //cube.Update();
+            //await cube.rightLeftEdge.DoLine();
+            //ZackTest();
+        }
+
+        void ZackTest()
+        {
+            while (true)
+            {
+                cube.SetColor(Colors.Red);
+                cube.Update();
+                cube.SetColor(Colors.Green);
+                cube.Update();
+                cube.SetColor(Colors.Blue);
+                cube.Update();
+            }
+        }
+
+        async Task FadeTest()
+        {
+            bool ascending = false;
+            cube.SetColor(Colors.Red);
+            while (true)
+            {
+                if (ascending)
+                {
+                    cube.Brightness++;
+                    if (cube.Brightness >= 255)
+                    {
+                        ascending = false;
+                        cube.Brightness = 255;
+                    }
+                }
+                else
+                {
+                    cube.Brightness--;
+                    if (cube.Brightness <= 0)
+                    {
+                        ascending = true;
+                        cube.Brightness = 0;
+                    }
+                }
+                cube.Update();
+                await Task.Delay(TimeSpan.FromMilliseconds(1/120));
+            }
+        }
+
+        void SetAll()
+        {
+            cube.SetColor(Colors.Red);
+            cube.Update();
         }
 
         async Task FlashTest()
@@ -203,7 +258,7 @@ namespace TheBox
                     }
                     leftStrip.SendPixels(leftStripPixels);
                     rightStrip.SendPixels(rightStripPixels);
-                    await Task.Delay(TimeSpan.FromMilliseconds(50));
+                    await Task.Delay(TimeSpan.FromMilliseconds(100));
                 }
             }
         }
@@ -486,6 +541,15 @@ namespace TheBox
         unsafe interface IMemoryBufferByteAccess
         {
             void GetBuffer(out byte* buffer, out uint capacity);
+        }
+
+        private void brightnessSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            if (cube != null)
+            {
+                cube.Brightness = (byte)e.NewValue;
+                cube.Update();
+            }
         }
     }
 }

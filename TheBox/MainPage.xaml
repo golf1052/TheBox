@@ -17,5 +17,6 @@
         <Rectangle x:Name="rightPositiveRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="50,0,0,0" Fill="CornflowerBlue"></Rectangle>
         <Rectangle x:Name="rightNegativeRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="50,100,0,0" Fill="CornflowerBlue"></Rectangle>
         <MediaElement x:Name="mediaElement"></MediaElement>
+        <Slider x:Name="brightnessSlider" Margin="50,0" VerticalAlignment="Center" Maximum="255" Value="255" ValueChanged="brightnessSlider_ValueChanged"/>
     </Grid>
 </Page>

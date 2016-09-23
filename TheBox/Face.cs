@@ -14,12 +14,30 @@ namespace TheBox
         private Edge bottom;
         private Edge left;
 
+        private byte brightness;
+        public byte Brightness
+        {
+            get
+            {
+                return brightness;
+            }
+            set
+            {
+                brightness = value;
+                top.Brightness = value;
+                right.Brightness = value;
+                bottom.Brightness = value;
+                left.Brightness = value;
+            }
+        }
+
         public Face(Edge top, Edge right, Edge bottom, Edge left)
         {
             this.top = top;
             this.right = right;
             this.bottom = bottom;
             this.left = left;
+            brightness = 255;
         }
 
         public void SetColor(Color color)
