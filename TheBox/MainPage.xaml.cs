@@ -173,25 +173,25 @@ namespace TheBox
             Color color4 = RandomColor();
 
             // BOTTOM LEFT, BOTTOM FRONT, LEFT FRONT
-            cube.bottomLeft.SetColor(color1);
-            cube.bottomFront.SetColor(color1);
-            cube.leftFront.SetColor(color1);
+            cube.bottomLeftEdge.SetColor(color1);
+            cube.bottomFrontEdge.SetColor(color1);
+            cube.leftFrontEdge.SetColor(color1);
 
             // BOTTOM RIGHT, BOTTOM BACK, RIGHT BACK
-            cube.bottomRight.SetColor(color2);
-            cube.bottomBack.SetColor(color2);
-            cube.rightBack.SetColor(color2);
+            cube.bottomRightEdge.SetColor(color2);
+            cube.bottomBackEdge.SetColor(color2);
+            cube.rightBackEdge.SetColor(color2);
 
 
             // TOP RIGHT, TOP FRONT, RIGHT FRONT
-            cube.topRight.SetColor(color3);
-            cube.topFront.SetColor(color3);
-            cube.rightFront.SetColor(color3);
+            cube.topRightEdge.SetColor(color3);
+            cube.topFrontEdge.SetColor(color3);
+            cube.rightFrontEdge.SetColor(color3);
 
             // TOP LEFT, TOP BACK, RIGHT BACK
-            cube.topLeft.SetColor(color4);
-            cube.topBack.SetColor(color4);
-            cube.rightBack.SetColor(color4);
+            cube.topLeftEdge.SetColor(color4);
+            cube.topBackEdge.SetColor(color4);
+            cube.rightBackEdge.SetColor(color4);
 
         }
 
