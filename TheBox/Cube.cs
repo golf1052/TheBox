@@ -24,17 +24,17 @@ namespace TheBox
         public Edge bottomBackEdge;
         public Edge bottomLeftEdge;
 
-        public Edge frontLeftEdge;
-        public Edge frontTopEdge;
+        public Edge leftFrontEdge;
+        public Edge topFrontEdge;
 
-        public Edge rightLeftEdge;
-        public Edge rightTopEdge;
+        public Edge rightFrontEdge;
+        public Edge topRightEdge;
 
-        public Edge backLeftEdge;
-        public Edge backTopEdge;
+        public Edge leftBackEdge;
+        public Edge topBackEdge;
 
-        public Edge leftLeftEdge;
-        public Edge leftTopEdge;
+        public Edge rightBackEdge;
+        public Edge topLeftEdge;
 
         public Face bottom;
         public Face front;
@@ -72,27 +72,28 @@ namespace TheBox
             bottomBackEdge = new Edge(0, 13, leftStrip);
             bottomLeftEdge = new Edge(13, 26, leftStrip);
 
-            frontLeftEdge = new Edge(26, 39, leftStrip);
-            frontTopEdge = new Edge(39, 52, leftStrip);
+            topFrontEdge = new Edge(39, 52, leftStrip);
+            topRightEdge = new Edge(52, 65, leftStrip);
+            topBackEdge = new Edge(39, 52, rightStrip);
+            topLeftEdge = new Edge(52, 65, rightStrip);
 
-            rightLeftEdge = new Edge(65, 78, rightStrip);
-            rightTopEdge = new Edge(52, 65, leftStrip);
+            leftFrontEdge = new Edge(26, 39, leftStrip);
+            leftBackEdge = new Edge(26, 39, rightStrip);
 
-            backLeftEdge = new Edge(26, 39, rightStrip);
-            backTopEdge = new Edge(39, 52, rightStrip);
+            rightFrontEdge = new Edge(65, 78, rightStrip);
+            rightBackEdge = new Edge(65, 78, leftStrip);
 
-            leftLeftEdge = new Edge(65, 78, leftStrip);
-            leftTopEdge = new Edge(52, 65, rightStrip);
 
             bottom = new Face(bottomFrontEdge, bottomRightEdge, bottomBackEdge, bottomLeftEdge);
-            front = new Face(frontTopEdge, rightLeftEdge, bottomFrontEdge, frontLeftEdge);
-            right = new Face(rightTopEdge, backLeftEdge, bottomRightEdge, rightLeftEdge);
-            back = new Face(backTopEdge, leftLeftEdge, bottomBackEdge, backLeftEdge);
-            left = new Face(leftTopEdge, frontLeftEdge, bottomLeftEdge, leftLeftEdge);
-            top = new Face(frontTopEdge, rightTopEdge, backTopEdge, leftTopEdge);
+            front = new Face(topFrontEdge, rightFrontEdge, bottomFrontEdge, leftFrontEdge);
+            right = new Face(topRightEdge, rightBackEdge, bottomRightEdge, rightFrontEdge);
+            back = new Face(topBackEdge, rightBackEdge, bottomBackEdge, leftBackEdge);
+            left = new Face(topLeftEdge, leftFrontEdge, bottomLeftEdge, leftBackEdge);
+            top = new Face(topFrontEdge, topRightEdge, topBackEdge, topLeftEdge);
 
             brightness = 255;
         }
+
 
         public void SetEdgeColor(Edge edge, Color color)
         {
