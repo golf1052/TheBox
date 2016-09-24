@@ -48,6 +48,14 @@ namespace TheBox
             left.SetColor(color);
         }
 
+        public void SetLedColors()
+        {
+            top.SetLedColors();
+            right.SetLedColors();
+            bottom.SetLedColors();
+            left.SetLedColors();
+        }
+
         public void Reset()
         {
             top.Reset();

@@ -138,7 +138,38 @@ namespace TheBox
             outputNode.Start();
             inputNode.Start();
             frameOutputNode.Start();
-            await RainbowTest();
+            cube.Reset();
+            cube.Update();
+            cube.ApplyColorFunction((x, y, z) =>
+            {
+                Color c = Color.FromArgb(255,
+                    (byte)((x / 14.0) * 255.0),
+                    (byte)((y / 14.0) * 255.0),
+                    (byte)((z / 14.0) * 255.0));
+                return c;
+            });
+            cube.SetLedColors();
+            cube.Update();
+            //cube.bottomFrontEdge.SetColor(Colors.Red);
+            //cube.bottomRightEdge.SetColor(Colors.OrangeRed);
+            //cube.bottomBackEdge.SetColor(Colors.Yellow);
+            //cube.bottomLeftEdge.SetColor(Colors.Green);
+            //cube.frontLeftEdge.SetColor(Colors.Blue);
+            //cube.frontTopEdge.SetColor(Colors.Purple);
+            //cube.rightLeftEdge.Brightness = 10;
+            //cube.rightLeftEdge.SetColor(Colors.Red);
+            //cube.rightTopEdge.Brightness = 10;
+            //cube.rightTopEdge.SetColor(Colors.OrangeRed);
+            //cube.backLeftEdge.Brightness = 10;
+            //cube.backLeftEdge.SetColor(Colors.Yellow);
+            //cube.backTopEdge.Brightness = 10;
+            //cube.backTopEdge.SetColor(Colors.Green);
+            //cube.leftLeftEdge.Brightness = 10;
+            //cube.leftLeftEdge.SetColor(Colors.Blue);
+            //cube.leftTopEdge.Brightness = 10;
+            //cube.leftTopEdge.SetColor(Colors.Purple);
+            //cube.Update();
+            //await RainbowTest();
             //cube.Brightness = 30;
             //await FlashTest();
             //SetAll();

@@ -7,7 +7,7 @@ using Windows.UI;
 
 namespace TheBox
 {
-    public struct Edge
+    public class Edge
     {
         public int[] leds;
         private DotStarStrip strip;
@@ -31,7 +31,7 @@ namespace TheBox
             }
         }
 
-        public List<Color> testLine;
+        public List<Color> ledColors;
 
         public Edge(int start, int end, DotStarStrip strip)
         {
@@ -44,37 +44,23 @@ namespace TheBox
                 j++;
             }
             brightness = 255;
-            testLine = new List<Color>();
-            for (int i = 0; i < 26; i++)
-            {
-                Color c = Colors.Red;
-                if (i < 13)
-                {
-                    c.A = (byte)(255.0 * (1.0 - ((double)i / 12.0)));
-                }
-                else
-                {
-                    c.A = 0;
-                }
-                
-                testLine.Add(c);
-            }
+            ledColors = new List<Color>();
         }
 
         public async Task DoLine()
         {
             int offset = 0;
-            for (int times = 0; times < testLine.Count; times++)
+            for (int times = 0; times < ledColors.Count; times++)
             {
                 int j = offset;
                 for (int i = 0; i < leds.Length; i++)
                 {
-                    strip.strip[leds[i]] = testLine[j];
+                    strip.strip[leds[i]] = ledColors[j];
                     j++;
-                    j %= testLine.Count - 1;
+                    j %= ledColors.Count - 1;
                 }
                 offset++;
-                if (offset >= testLine.Count)
+                if (offset >= ledColors.Count)
                 {
                     offset = 0;
                 }
@@ -89,6 +75,14 @@ namespace TheBox
             foreach (int i in leds)
             {
                 strip.strip[i] = color;
+            }
+        }
+
+        public void SetLedColors()
+        {
+            for (int i = 0; i < leds.Length; i++)
+            {
+                strip.strip[leds[i]] = ledColors[i];
             }
         }
 
