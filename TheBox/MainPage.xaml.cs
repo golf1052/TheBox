@@ -180,7 +180,7 @@ namespace TheBox
             // BOTTOM RIGHT, BOTTOM BACK, RIGHT BACK
             cube.bottomRightEdge.SetColor(color2);
             cube.bottomBackEdge.SetColor(color2);
-            cube.rightBackEdge.SetColor(color2);
+            cube.leftBackEdge.SetColor(color2);
 
 
             // TOP RIGHT, TOP FRONT, RIGHT FRONT
