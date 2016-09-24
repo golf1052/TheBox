@@ -98,7 +98,7 @@ namespace TheBox
                 Debug.WriteLine("Could not find USB audio card");
                 return;
             }
-            
+
             // Set up LED strips
             await leftStrip.Begin();
             await rightStrip.Begin();
@@ -138,7 +138,7 @@ namespace TheBox
             outputNode.Start();
             inputNode.Start();
             frameOutputNode.Start();
-            await RainbowTest();
+            // await RainbowTest();
             //cube.Brightness = 30;
             //await FlashTest();
             //SetAll();
@@ -147,6 +147,8 @@ namespace TheBox
             //cube.Update();
             //await cube.rightLeftEdge.DoLine();
             //ZackTest();
+            //
+            AlfredCornerTest();
         }
 
         void ZackTest()
@@ -160,6 +162,37 @@ namespace TheBox
                 cube.SetColor(Colors.Blue);
                 cube.Update();
             }
+        }
+
+        void AlfredCornerTest()
+        {
+
+            Color color1 = RandomColor();
+            Color color2 = RandomColor();
+            Color color3 = RandomColor();
+            Color color4 = RandomColor();
+
+            // BOTTOM LEFT, BOTTOM FRONT, LEFT FRONT
+            cube.bottomLeft.SetColor(color1);
+            cube.bottomFront.SetColor(color1);
+            cube.leftFront.SetColor(color1);
+
+            // BOTTOM RIGHT, BOTTOM BACK, RIGHT BACK
+            cube.bottomRight.SetColor(color2);
+            cube.bottomBack.SetColor(color2);
+            cube.rightBack.SetColor(color2);
+
+
+            // TOP RIGHT, TOP FRONT, RIGHT FRONT
+            cube.topRight.SetColor(color3);
+            cube.topFront.SetColor(color3);
+            cube.rightFront.SetColor(color3);
+
+            // TOP LEFT, TOP BACK, RIGHT BACK
+            cube.topLeft.SetColor(color4);
+            cube.topBack.SetColor(color4);
+            cube.rightBack.SetColor(color4);
+
         }
 
         async Task FadeTest()
@@ -440,7 +473,7 @@ namespace TheBox
                         beatValue = currentAverage;
                         beat = true;
                     }
-                }                
+                }
             }
             await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
                 () =>
