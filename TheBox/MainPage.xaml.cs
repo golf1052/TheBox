@@ -166,11 +166,11 @@ namespace TheBox
 
         void AlfredCornerTest()
         {
-
-            Color color1 = RandomColor();
-            Color color2 = RandomColor();
-            Color color3 = RandomColor();
-            Color color4 = RandomColor();
+            Random random = new Random();
+            Color color1 = Colors.Red;
+            Color color2 = Colors.Green;
+            Color color3 = Colors.Blue;
+            Color color4 = Colors.White;
 
             // BOTTOM LEFT, BOTTOM FRONT, LEFT FRONT
             cube.bottomLeftEdge.SetColor(color1);
@@ -192,7 +192,7 @@ namespace TheBox
             cube.topLeftEdge.SetColor(color4);
             cube.topBackEdge.SetColor(color4);
             cube.rightBackEdge.SetColor(color4);
-
+            cube.Update();
         }
 
         async Task FadeTest()
@@ -271,6 +271,11 @@ namespace TheBox
         Color RandomColor()
         {
             Random random = new Random();
+            return Color.FromArgb(255, (byte)random.Next(0, 256), (byte)random.Next(0, 256), (byte)random.Next(256));
+        }
+
+        Color RandomColor(Random random)
+        {
             return Color.FromArgb(255, (byte)random.Next(0, 256), (byte)random.Next(0, 256), (byte)random.Next(256));
         }
 
