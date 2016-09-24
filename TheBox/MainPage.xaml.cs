@@ -133,6 +133,7 @@ namespace TheBox
             inputNode.AddOutgoingConnection(frameOutputNode);
             inputNode.AddOutgoingConnection(outputNode);
             //audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
+            // z = sin(sqrt(x2+y2)) from 0 to 2p1
             audioGraph.UnrecoverableErrorOccurred += AudioGraph_UnrecoverableErrorOccurred;
             audioGraph.Start();
             outputNode.Start();
@@ -140,16 +141,17 @@ namespace TheBox
             frameOutputNode.Start();
             cube.Reset();
             cube.Update();
-            cube.ApplyColorFunction((x, y, z) =>
-            {
-                Color c = Color.FromArgb(255,
-                    (byte)((x / 14.0) * 255.0),
-                    (byte)((y / 14.0) * 255.0),
-                    (byte)((z / 14.0) * 255.0));
-                return c;
-            });
-            cube.SetLedColors();
-            cube.Update();
+            await MathFunc();
+            //cube.ApplyColorFunction((x, y, z) =>
+            //{
+            //    Color c = Color.FromArgb(255,
+            //        (byte)((x / 14.0) * 255.0),
+            //        (byte)((y / 14.0) * 255.0),
+            //        (byte)((z / 14.0) * 255.0));
+            //    return c;
+            //});
+            //cube.SetLedColors();
+            //cube.Update();
             //cube.bottomFrontEdge.SetColor(Colors.Red);
             //cube.bottomRightEdge.SetColor(Colors.OrangeRed);
             //cube.bottomBackEdge.SetColor(Colors.Yellow);
@@ -178,6 +180,32 @@ namespace TheBox
             //cube.Update();
             //await cube.rightLeftEdge.DoLine();
             //ZackTest();
+        }
+
+        async Task MathFunc()
+        {
+            // z = sin(sqrt(x^2+y^2)) from 0 to 2p1
+            while (true)
+            {
+                for (int i = 0; i < 256; i++)
+                {
+                    cube.ApplyColorFunction((x, y, z) =>
+                    {
+                        var xp = x / 14.0 * 2 * Math.PI;
+                        var yp = y / 14.0 * 2 * Math.PI;
+                        var zc = Math.Abs(Math.Sin(Math.Sqrt(Math.Pow(xp, 2) + Math.Pow(yp, 2))));
+                        Color c = Color.FromArgb(255,
+                            (byte)((((x / 14.0) * 255.0) + i) % 255.0),
+                            (byte)((((y / 14.0) * 255.0) + i) % 255.0),
+                            (byte)(((zc * 255.0) + i) % 255.0));
+                        return c;
+                    });
+                    cube.SetLedColors();
+                    cube.Update();
+                    //await Task.Delay(TimeSpan.FromMilliseconds(1));
+                }
+            }
+            
         }
 
         void ZackTest()
