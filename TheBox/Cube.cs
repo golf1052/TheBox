@@ -85,11 +85,13 @@ namespace TheBox
 
 
             bottom = new Face(bottomFrontEdge, bottomRightEdge, bottomBackEdge, bottomLeftEdge);
-            front = new Face(topFrontEdge, rightFrontEdge, bottomFrontEdge, leftFrontEdge);
-            right = new Face(topRightEdge, rightBackEdge, bottomRightEdge, rightFrontEdge);
-            back = new Face(topBackEdge, rightBackEdge, bottomBackEdge, leftBackEdge);
-            left = new Face(topLeftEdge, leftFrontEdge, bottomLeftEdge, leftBackEdge);
             top = new Face(topFrontEdge, topRightEdge, topBackEdge, topLeftEdge);
+
+            front = new Face(topFrontEdge, rightFrontEdge, bottomFrontEdge, leftFrontEdge);
+            back = new Face(topBackEdge, rightBackEdge, bottomBackEdge, leftBackEdge);
+
+            left = new Face(topLeftEdge, leftFrontEdge, bottomLeftEdge, leftBackEdge);
+            right = new Face(topRightEdge, rightBackEdge, bottomRightEdge, rightFrontEdge);
 
             brightness = 255;
         }
