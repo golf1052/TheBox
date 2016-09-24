@@ -141,7 +141,7 @@ namespace TheBox
             frameOutputNode.Start();
             cube.Reset();
             cube.Update();
-            await MathFunc();
+            //await MathFunc();
             //cube.ApplyColorFunction((x, y, z) =>
             //{
             //    Color c = Color.FromArgb(255,
@@ -171,7 +171,7 @@ namespace TheBox
             //cube.leftTopEdge.Brightness = 10;
             //cube.leftTopEdge.SetColor(Colors.Purple);
             //cube.Update();
-            //await RainbowTest();
+            await RainbowTest();
             //cube.Brightness = 30;
             //await FlashTest();
             //SetAll();
@@ -187,22 +187,28 @@ namespace TheBox
             // z = sin(sqrt(x^2+y^2)) from 0 to 2p1
             while (true)
             {
-                for (int i = 0; i < 256; i++)
+                for (int i = 1; i < 32; i++)
                 {
+                    var j = Math.Abs(i - 16.0);
                     cube.ApplyColorFunction((x, y, z) =>
                     {
-                        var xp = x / 14.0 * 2 * Math.PI;
-                        var yp = y / 14.0 * 2 * Math.PI;
+                        var xp = x / 14.0 * 2 * Math.PI; // 0, 2PI
+                        var yp = y / 14.0 * 2 * Math.PI; // 0, 2PI
                         var zc = Math.Abs(Math.Sin(Math.Sqrt(Math.Pow(xp, 2) + Math.Pow(yp, 2))));
+                        var phase = j * 16;
+                        if (phase == 256)
+                        {
+                            phase = 255;
+                        }
                         Color c = Color.FromArgb(255,
-                            (byte)((((x / 14.0) * 255.0) + i) % 255.0),
-                            (byte)((((y / 14.0) * 255.0) + i) % 255.0),
-                            (byte)(((zc * 255.0) + i) % 255.0));
+                            (byte)((((Math.Abs(x - 7.0) / 7.0) * 255.0) + phase) % 255.0),
+                            (byte)((((Math.Abs(y - 7.0) / 7.0) * 255.0) + phase) % 255.0),
+                            (byte)(((zc * 255.0) + phase) % 255.0));
                         return c;
                     });
                     cube.SetLedColors();
                     cube.Update();
-                    //await Task.Delay(TimeSpan.FromMilliseconds(1));
+                    await Task.Delay(TimeSpan.FromMilliseconds(16));
                 }
             }
             
