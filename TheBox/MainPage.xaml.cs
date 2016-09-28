@@ -23,6 +23,8 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using Windows.Media.Render;
+using Windows.UI.Xaml.Shapes;
+using System.Text;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -57,12 +59,38 @@ namespace TheBox
 
         Cube cube;
 
+        List<Rectangle> rectangles;
+
         public MainPage()
         {
             this.InitializeComponent();
             leftStrip = new DotStarStrip(78, "SPI0");
             rightStrip = new DotStarStrip(78, "SPI1");
             cube = new Cube(leftStrip, rightStrip);
+            rectangles = new List<Rectangle>();
+            for (int i = 0; i < 220; i++)
+            {
+                Rectangle rect = new Rectangle();
+                if (i < 15)
+                {
+                    rect.Fill = new SolidColorBrush(Colors.Red);
+                }
+                else if (i < 100)
+                {
+                    rect.Fill = new SolidColorBrush(Colors.Green);
+                }
+                else
+                {
+                    rect.Fill = new SolidColorBrush(Colors.CornflowerBlue);
+                }
+                rect.HorizontalAlignment = HorizontalAlignment.Left;
+                rect.VerticalAlignment = VerticalAlignment.Bottom;
+                rect.Width = 8;
+                rect.Height = 0;
+                rect.Margin = new Thickness(i * 8, 0, 0, 0);
+                rectangleGrid.Children.Add(rect);
+                rectangles.Add(rect);
+            }
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -104,7 +132,7 @@ namespace TheBox
             await rightStrip.Begin();
             //await AudioTest();
             AudioGraphSettings audioGraphSettings = new AudioGraphSettings(AudioRenderCategory.Media);
-            audioGraphSettings.DesiredSamplesPerQuantum = 1024;
+            audioGraphSettings.DesiredSamplesPerQuantum = 440;
             audioGraphSettings.DesiredRenderDeviceAudioProcessing = AudioProcessing.Default;
             audioGraphSettings.QuantumSizeSelectionMode = QuantumSizeSelectionMode.ClosestToDesired;
             audioGraphSettings.PrimaryRenderDevice = raspiAudioOutput;
@@ -132,7 +160,7 @@ namespace TheBox
             frameOutputNode = audioGraph.CreateFrameOutputNode();
             inputNode.AddOutgoingConnection(frameOutputNode);
             inputNode.AddOutgoingConnection(outputNode);
-            //audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
+            audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
             // z = sin(sqrt(x2+y2)) from 0 to 2p1
             audioGraph.UnrecoverableErrorOccurred += AudioGraph_UnrecoverableErrorOccurred;
             audioGraph.Start();
@@ -171,7 +199,7 @@ namespace TheBox
             //cube.leftTopEdge.Brightness = 10;
             //cube.leftTopEdge.SetColor(Colors.Purple);
             //cube.Update();
-            await RainbowTest();
+            //await RainbowTest();
             //cube.Brightness = 30;
             //await FlashTest();
             //SetAll();
@@ -317,7 +345,7 @@ namespace TheBox
                     for (int i = 0; i < leftStrip.PixelCount; i++)
                     {
                         Color color = HexToRgb(rainbow[(i + j) % rainbow.Length]);
-                        color.A = 30;
+                        color.A = 255;
                         leftStripPixels[i] = color;
                         rightStripPixels[i] = color;
                     }
@@ -354,8 +382,64 @@ namespace TheBox
         private async void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
         {
             AudioFrame audioFrame = frameOutputNode.GetFrame();
-            List<float[]> channelData = ProcessFrameOutput(audioFrame);
-            float[] leftChannel = channelData[0];
+            List<float[]> channelData = GetFftData(ConvertTo512(ProcessFrameOutput(audioFrame)));
+            for (int i = 0; i < channelData.Count / 2; i++)
+            {
+                float[] leftChannel = channelData[i];
+                float[] rightChannel = channelData[i + 1];
+                for (int j = 0; j < leftStrip.PixelCount; j++)
+                {
+                    Color leftColor;
+                    Color rightColor;
+                    if (j < 13)
+                    {
+                        leftColor = Colors.Red;
+                        rightColor = Colors.Red;
+                    }
+                    else if (j < 39)
+                    {
+                        leftColor = Colors.Green;
+                        leftColor = Colors.Green;
+                    }
+                    else if (j < 78)
+                    {
+                        leftColor = Colors.Blue;
+                        rightColor = Colors.Blue;
+                    }
+
+                    float leftAverage = 0;
+                    for (int k = j * 2; k < (j + 1) * 2; k++)
+                    {
+                        leftAverage += Math.Abs(leftChannel[k]);
+                    }
+                    leftAverage /= 2.0f;
+                    int leftGammaCorrect = GammaCorrection(leftAverage * 3, maxInput: 1);
+                    leftColor.A = (byte)leftGammaCorrect;
+                    leftStrip.strip[j] = leftColor;
+
+                    float rightAverage = 0;
+                    for (int k = j * 2; k < (j + 1) * 2; k++)
+                    {
+                        rightAverage += Math.Abs(rightChannel[k]);
+                    }
+                    rightAverage /= 2;
+                    int rightGammaCorrect = GammaCorrection(rightAverage * 3, maxInput: 1);
+                    rightColor.A = (byte)rightGammaCorrect;
+                    rightStrip.strip[j] = rightColor;
+
+                    leftStrip.SendPixels();
+                    rightStrip.SendPixels();
+                }
+                await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
+                    () =>
+                    {
+                        for (int j = 0; j < rectangles.Count; j++)
+                        {
+                            rectangles[j].Height = Math.Abs(leftChannel[j]) * 1080;
+                        }
+                    });
+            }
+            //float[] leftChannel = channelData[0];
             //Complex[] leftFft = new Complex[256];
             //for (int i = 0; i < leftFft.Length; i++)
             //{
@@ -369,69 +453,69 @@ namespace TheBox
             //{
             //    leftFftResult[i] = (float)Math.Sqrt(Math.Pow(leftFft[i].X, 2) + Math.Pow(leftFft[i].Y, 2));
             //}
-            float[] rightChannel = channelData[1];
-            float leftAverage = 0;
-            float rightAverage = 0;
-            float leftPositiveAverage = 0;
-            int leftPositiveAdded = 0;
-            float leftNegativeAverage = 0;
-            int leftNegativeAdded = 0;
-            float rightPositiveAverage = 0;
-            int rightPositiveAdded = 0;
-            float rightNegativeAverage = 0;
-            int rightNegativeAdded = 0;
-            for (int i = 0; i < leftChannel.Length; i++)
-            {
-                float leftValue = leftChannel[i];
-                leftAverage += Math.Abs(leftValue);
-                if (leftValue < 0)
-                {
-                    leftNegativeAverage += leftValue;
-                    leftNegativeAdded++;
-                }
-                else
-                {
-                    leftPositiveAverage += leftValue;
-                    leftPositiveAdded++;
-                }
+            //float[] rightChannel = channelData[1];
+            //float leftAverage = 0;
+            //float rightAverage = 0;
+            //float leftPositiveAverage = 0;
+            //int leftPositiveAdded = 0;
+            //float leftNegativeAverage = 0;
+            //int leftNegativeAdded = 0;
+            //float rightPositiveAverage = 0;
+            //int rightPositiveAdded = 0;
+            //float rightNegativeAverage = 0;
+            //int rightNegativeAdded = 0;
+            //for (int i = 0; i < leftChannel.Length; i++)
+            //{
+            //    float leftValue = leftChannel[i];
+            //    leftAverage += Math.Abs(leftValue);
+            //    if (leftValue < 0)
+            //    {
+            //        leftNegativeAverage += leftValue;
+            //        leftNegativeAdded++;
+            //    }
+            //    else
+            //    {
+            //        leftPositiveAverage += leftValue;
+            //        leftPositiveAdded++;
+            //    }
 
-                float rightValue = rightChannel[i];
-                rightAverage += Math.Abs(rightValue);
-                if (rightValue < 0)
-                {
-                    rightNegativeAverage += rightValue;
-                    rightNegativeAdded++;
-                }
-                else
-                {
-                    rightPositiveAverage += rightValue;
-                    rightPositiveAdded++;
-                }
-            }
-            if (leftPositiveAdded > 0)
-            {
-                leftPositiveAverage /= leftPositiveAdded;
-            }
-            if (leftNegativeAdded > 0)
-            {
-                leftNegativeAverage /= leftNegativeAdded;
-            }
-            if (rightPositiveAdded > 0)
-            {
-                rightPositiveAverage /= rightPositiveAdded;
-            }
-            if (rightNegativeAdded > 0)
-            {
-                rightNegativeAverage /= rightNegativeAdded;
-            }
-            if (leftChannel.Length > 0)
-            {
-                leftAverage /= leftChannel.Length;
-            }
-            if (rightChannel.Length > 0)
-            {
-                rightAverage /= rightChannel.Length;
-            }
+            //    float rightValue = rightChannel[i];
+            //    rightAverage += Math.Abs(rightValue);
+            //    if (rightValue < 0)
+            //    {
+            //        rightNegativeAverage += rightValue;
+            //        rightNegativeAdded++;
+            //    }
+            //    else
+            //    {
+            //        rightPositiveAverage += rightValue;
+            //        rightPositiveAdded++;
+            //    }
+            //}
+            //if (leftPositiveAdded > 0)
+            //{
+            //    leftPositiveAverage /= leftPositiveAdded;
+            //}
+            //if (leftNegativeAdded > 0)
+            //{
+            //    leftNegativeAverage /= leftNegativeAdded;
+            //}
+            //if (rightPositiveAdded > 0)
+            //{
+            //    rightPositiveAverage /= rightPositiveAdded;
+            //}
+            //if (rightNegativeAdded > 0)
+            //{
+            //    rightNegativeAverage /= rightNegativeAdded;
+            //}
+            //if (leftChannel.Length > 0)
+            //{
+            //    leftAverage /= leftChannel.Length;
+            //}
+            //if (rightChannel.Length > 0)
+            //{
+            //    rightAverage /= rightChannel.Length;
+            //}
             //await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
             //    () =>
             //    {
@@ -473,58 +557,58 @@ namespace TheBox
             //    //Debug.WriteLine(rightChannel.Length);
             //    rightAverage /= rightChannel.Length;
             //}
-            List<Color> leftStripColors = new List<Color>();
+            //List<Color> leftStripColors = new List<Color>();
             //List<Color> rightStripColors = new List<Color>();
-            float currentAverage = (leftAverage + rightAverage) / 2;
-            bool beat = false;
-            if (currentAverage > beatValue - 0.1)
-            {
-                lastBeat = DateTime.Now;
-                beatValue = currentAverage;
-                beat = true;
-                if (lastBeat == DateTime.MinValue)
-                {
-                    lastBeat = DateTime.Now;
-                    beatValue = currentAverage;
-                }
-                else
-                {
-                    DateTime now = DateTime.Now;
-                    TimeSpan difference = ((now - lastBeat) - timeBetweenBeats).Duration();
-                    if (timeBetweenBeats == TimeSpan.Zero)
-                    {
-                        timeBetweenBeats = now - lastBeat;
-                        lastBeat = now;
-                        beatValue = currentAverage;
-                    }
-                    else if (difference.Ticks >= timeBetweenBeats.Ticks - timeBetweenBeats.Ticks / 4 &&
-                        difference.Ticks <= timeBetweenBeats.Ticks - timeBetweenBeats.Ticks / 4)
-                    {
-                        timeBetweenBeats = now - lastBeat;
-                        lastBeat = now;
-                        beatValue = currentAverage;
-                        beat = true;
-                    }
-                }                
-            }
-            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-                () =>
-                {
-                    currentAverageBlock.Text = currentAverage.ToString();
-                    lastBeatBlock.Text = lastBeat.ToString();
-                    timeBetweenBeatsBlock.Text = timeBetweenBeats.ToString();
-                    beatValueBlock.Text = beatValue.ToString();
-                });
-            if (beat)
-            {
-                leftStripColors = leftStrip.GetResetPixels(Colors.OrangeRed);
-                //rightStripColors = rightStrip.GetResetPixels(Colors.OrangeRed);
-            }
-            else
-            {
-                leftStripColors = leftStrip.GetResetPixels();
-                //rightStripColors = rightStrip.GetResetPixels();
-            }
+            //float currentAverage = (leftAverage + rightAverage) / 2;
+            //bool beat = false;
+            //if (currentAverage > beatValue - 0.1)
+            //{
+            //    lastBeat = DateTime.Now;
+            //    beatValue = currentAverage;
+            //    beat = true;
+            //    if (lastBeat == DateTime.MinValue)
+            //    {
+            //        lastBeat = DateTime.Now;
+            //        beatValue = currentAverage;
+            //    }
+            //    else
+            //    {
+            //        DateTime now = DateTime.Now;
+            //        TimeSpan difference = ((now - lastBeat) - timeBetweenBeats).Duration();
+            //        if (timeBetweenBeats == TimeSpan.Zero)
+            //        {
+            //            timeBetweenBeats = now - lastBeat;
+            //            lastBeat = now;
+            //            beatValue = currentAverage;
+            //        }
+            //        else if (difference.Ticks >= timeBetweenBeats.Ticks - timeBetweenBeats.Ticks / 4 &&
+            //            difference.Ticks <= timeBetweenBeats.Ticks - timeBetweenBeats.Ticks / 4)
+            //        {
+            //            timeBetweenBeats = now - lastBeat;
+            //            lastBeat = now;
+            //            beatValue = currentAverage;
+            //            beat = true;
+            //        }
+            //    }                
+            //}
+            //await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
+            //    () =>
+            //    {
+            //        currentAverageBlock.Text = currentAverage.ToString();
+            //        lastBeatBlock.Text = lastBeat.ToString();
+            //        timeBetweenBeatsBlock.Text = timeBetweenBeats.ToString();
+            //        beatValueBlock.Text = beatValue.ToString();
+            //    });
+            //if (beat)
+            //{
+            //    leftStripColors = leftStrip.GetResetPixels(Colors.OrangeRed);
+            //    //rightStripColors = rightStrip.GetResetPixels(Colors.OrangeRed);
+            //}
+            //else
+            //{
+            //    leftStripColors = leftStrip.GetResetPixels();
+            //    //rightStripColors = rightStrip.GetResetPixels();
+            //}
             //for (int i = leftStrip.PixelCount / 2 - 1; i < Math.Ceiling(leftPositiveAverage * leftStrip.PixelCount); i++)
             //{
             //    leftStripColors[i] = Colors.White;
@@ -541,17 +625,101 @@ namespace TheBox
             //{
             //    rightStripColors[i] = Colors.White;
             //}
-            for (int i = 0; i < Math.Ceiling(leftAverage * leftStrip.PixelCount); i++)
-            {
-                leftStripColors[i] = Colors.CornflowerBlue;
-            }
+            //for (int i = 0; i < Math.Ceiling(leftAverage * leftStrip.PixelCount); i++)
+            //{
+            //    leftStripColors[i] = Colors.CornflowerBlue;
+            //}
             //for (int i = 0; i < Math.Ceiling(rightAverage * rightStrip.PixelCount); i++)
             //{
             //    rightStripColors[i] = Colors.CornflowerBlue;
             //}
-            leftStrip.SendPixels(leftStripColors);
+            //leftStrip.SendPixels(leftStripColors);
             //rightStrip.SendPixels(rightStripColors);
             ////doneProcessing = true;
+        }
+
+        List<float[]> ConvertTo512(List<float[]> channelData)
+        {
+            List<float[]> newChannelData = new List<float[]>();
+            float[] leftChannel = channelData[0];
+            float[] rightChannel = channelData[1];
+            for (int i = 0; i < leftChannel.Length / audioGraph.SamplesPerQuantum; i++)
+            {
+                float[] tmpLeftChannelData = new float[512];
+                float[] tmpRightChannelData = new float[512];
+
+                // copy the left and right channel data into a new array
+                for (int j = i * audioGraph.SamplesPerQuantum; j < (i + 1) * audioGraph.SamplesPerQuantum; j++)
+                {
+                    tmpLeftChannelData[j % audioGraph.SamplesPerQuantum] = leftChannel[j];
+                    tmpRightChannelData[j % audioGraph.SamplesPerQuantum] = rightChannel[j];
+                }
+
+                // then pad the rest with 0s till we get to 512
+                for (int j = audioGraph.SamplesPerQuantum; j < 512; j++)
+                {
+                    tmpLeftChannelData[j] = 0;
+                    tmpRightChannelData[j] = 0;
+                }
+                newChannelData.Add(tmpLeftChannelData);
+                newChannelData.Add(tmpRightChannelData);
+            }
+            return newChannelData;
+        }
+
+        List<float[]> GetFftData(List<float[]> channelData)
+        {
+            List<float[]> fftData = new List<float[]>();
+            for (int i = 0; i < channelData.Count / 2; i++)
+            {
+                float[] leftChannel = GetFftChannelData(channelData[i]);
+                float[] rightChannel = GetFftChannelData(channelData[i + 1]);
+                fftData.Add(leftChannel);
+                fftData.Add(rightChannel);
+            }
+            return fftData;
+        }
+
+        float[] GetFftChannelData(float[] channelData)
+        {
+            Complex[] fftData = new Complex[512];
+            for (int j = 0; j < fftData.Length; j++)
+            {
+                Complex c = new Complex();
+                c.X = channelData[j] * (float)Fft.HannWindow(j, fftData.Length);
+                fftData[j] = c;
+            }
+            Fft.Calculate(fftData);
+            float[] fftResult = new float[audioGraph.SamplesPerQuantum / 2];
+            for (int j = 0; j < fftResult.Length; j++)
+            {
+                fftResult[j] = (float)Math.Sqrt(Math.Pow(fftData[j].X, 2) + Math.Pow(fftData[j].Y, 2));
+            }
+            return fftResult;
+        }
+
+        int GammaCorrection(float val, float gamma = 2.8f, int maxInput = 255, int maxOutput = 255)
+        {
+            return (int)(Math.Pow(val / (float)maxInput, gamma) * (float)maxOutput + 0.5f);
+        }
+
+        void PrintArray(float[] array)
+        {
+            StringBuilder str = new StringBuilder();
+            str.Append("[");
+            for (int i = 0; i < array.Length; i++)
+            {
+                if (i != array.Length - 1)
+                {
+                    str.Append(array[i]).Append(", ");
+                }
+                else
+                {
+                    str.Append(array[i]);
+                }
+            }
+            str.Append("]");
+            Debug.WriteLine(str.ToString());
         }
 
         Color HexToRgb(int hex)

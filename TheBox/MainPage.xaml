@@ -8,6 +8,8 @@
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid x:Name="rectangleGrid">
+        </Grid>
         <TextBlock x:Name="currentAverageBlock" VerticalAlignment="Bottom" Foreground="Black"></TextBlock>
         <TextBlock x:Name="lastBeatBlock" VerticalAlignment="Bottom" Foreground="Black" Margin="0,0,0,20"></TextBlock>
         <TextBlock x:Name="timeBetweenBeatsBlock" VerticalAlignment="Bottom" Foreground="Black" Margin="0,0,0,40"></TextBlock>

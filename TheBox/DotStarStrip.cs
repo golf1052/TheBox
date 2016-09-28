@@ -78,7 +78,8 @@ namespace TheBox
         {
             List<byte> spiDataBytes = new List<byte>();
             spiDataBytes.AddRange(startFrame);
-            foreach (Color pixel in pixels)
+            List<Color> copy = new List<Color>(pixels);
+            foreach (Color pixel in copy)
             {
                 //spiDataBytes.Add(0xE0 | 0x1F);
                 spiDataBytes.Add((byte)(0xE0 | (byte)(pixel.A >> 3)));
