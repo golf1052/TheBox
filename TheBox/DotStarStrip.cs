@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,6 +26,8 @@ namespace TheBox
         private byte[] startFrame = { 0, 0, 0, 0 };
         private byte[] endFrame;
 
+        private byte[] spiDataBytes;
+
         public List<Color> strip;
 
         public DotStarStrip(int numberOfLeds, string spiPort)
@@ -34,6 +37,11 @@ namespace TheBox
             int endFrameSize = PixelCount / 2 + 1;
             endFrame = new byte[endFrameSize];
             strip = GetResetPixels();
+            spiDataBytes = new byte[startFrame.Length + PixelCount * 4 + endFrame.Length];
+            for (int i = 0; i < startFrame.Length; i++)
+            {
+                spiDataBytes[i] = startFrame[i];
+            }
         }
 
         public async Task Begin()
@@ -76,20 +84,42 @@ namespace TheBox
 
         public void SendPixels(List<Color> pixels)
         {
-            List<byte> spiDataBytes = new List<byte>();
-            spiDataBytes.AddRange(startFrame);
-            List<Color> copy = new List<Color>(pixels);
-            foreach (Color pixel in copy)
+            int i = 4;
+            for (int j = 0; j < pixels.Count; j++)
             {
-                //spiDataBytes.Add(0xE0 | 0x1F);
-                spiDataBytes.Add((byte)(0xE0 | (byte)(pixel.A >> 3)));
-                spiDataBytes.Add((byte)(pixel.B >> 1));
-                spiDataBytes.Add((byte)(pixel.G >> 1));
-                spiDataBytes.Add((byte)(pixel.R >> 1));
+                spiDataBytes[i] = (byte)(0xE0 | (byte)(pixels[j].A >> 3));
+                i++;
+                spiDataBytes[i] = (byte)(pixels[j].B >> 1);
+                i++;
+                spiDataBytes[i] = (byte)(pixels[j].G >> 1);
+                i++;
+                spiDataBytes[i] = (byte)(pixels[j].R >> 1);
+                i++;
             }
-            spiDataBytes.AddRange(endFrame);
-            spiDevice.Write(spiDataBytes.ToArray());
+            for (int j = 0; j < endFrame.Length; j++)
+            {
+                spiDataBytes[i] = endFrame[j];
+                i++;
+            }
+            spiDevice.Write(spiDataBytes);
         }
+
+        // de optimized version
+        //public void SendPixels(List<Color> pixels)
+        //{
+        //    List<byte> spiDataBytes = new List<byte>();
+        //    spiDataBytes.AddRange(startFrame);
+        //    foreach (Color pixel in pixels)
+        //    {
+        //        //spiDataBytes.Add(0xE0 | 0x1F);
+        //        spiDataBytes.Add((byte)(0xE0 | (byte)(pixel.A >> 3)));
+        //        spiDataBytes.Add((byte)(pixel.B >> 1));
+        //        spiDataBytes.Add((byte)(pixel.G >> 1));
+        //        spiDataBytes.Add((byte)(pixel.R >> 1));
+        //    }
+        //    spiDataBytes.AddRange(endFrame);
+        //    spiDevice.Write(spiDataBytes.ToArray());
+        //}
 
         public void SendPixels(List<byte> pixels)
         {

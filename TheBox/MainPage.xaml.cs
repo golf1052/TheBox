@@ -160,7 +160,7 @@ namespace TheBox
             frameOutputNode = audioGraph.CreateFrameOutputNode();
             inputNode.AddOutgoingConnection(frameOutputNode);
             inputNode.AddOutgoingConnection(outputNode);
-            audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
+            //audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
             // z = sin(sqrt(x2+y2)) from 0 to 2p1
             audioGraph.UnrecoverableErrorOccurred += AudioGraph_UnrecoverableErrorOccurred;
             audioGraph.Start();
@@ -336,8 +336,6 @@ namespace TheBox
 
         async Task RainbowTest()
         {
-            List<Color> leftStripPixels = leftStrip.GetResetPixels();
-            List<Color> rightStripPixels = rightStrip.GetResetPixels();
             while (true)
             {
                 for (int j = 0; j < rainbow.Length; j++)
@@ -346,11 +344,11 @@ namespace TheBox
                     {
                         Color color = HexToRgb(rainbow[(i + j) % rainbow.Length]);
                         color.A = 255;
-                        leftStripPixels[i] = color;
-                        rightStripPixels[i] = color;
+                        leftStrip.strip[i] = color;
+                        rightStrip.strip[i] = color;
                     }
-                    leftStrip.SendPixels(leftStripPixels);
-                    rightStrip.SendPixels(rightStripPixels);
+                    leftStrip.SendPixels();
+                    rightStrip.SendPixels();
                     await Task.Delay(TimeSpan.FromMilliseconds(100));
                 }
             }
