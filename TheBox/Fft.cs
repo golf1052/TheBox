@@ -8,84 +8,171 @@ namespace TheBox
 {
     public static class Fft
     {
-        public static void Calculate(Complex[] data, bool forward = true)
+        /// <summary>
+		/// Fourier transformation direction.
+		/// </summary>
+		public enum Direction
         {
-            if ((data.Length & (data.Length - 1)) != 0)
+            /// <summary>
+            /// Forward direction of Fourier transformation.
+            /// </summary>
+            Forward = 1,
+
+            /// <summary>
+            /// Backward direction of Fourier transformation.
+            /// </summary>
+            Backward = -1
+        };
+
+        private const int		minLength	= 2;
+		private const int		maxLength	= 16384;
+		private const int		minBits		= 1;
+		private const int		maxBits		= 14;
+		private static int[][]	reversedBits = new int[maxBits][];
+		private static Complex[,][]	complexRotation = new Complex[maxBits, 2][];
+
+        // Get array, indicating which data members should be swapped before FFT
+		private static int[] GetReversedBits( int numberOfBits )
+		{
+			if ( ( numberOfBits < minBits ) || ( numberOfBits > maxBits ) )
+				throw new ArgumentOutOfRangeException( );
+
+			// check if the array is already calculated
+			if ( reversedBits[numberOfBits - 1] == null )
+			{
+				int		n = HelperMethods.Pow2( numberOfBits );
+				int[]	rBits = new int[n];
+
+				// calculate the array
+				for ( int i = 0; i < n; i++ )
+				{
+					int oldBits = i;
+					int newBits = 0;
+
+					for ( int j = 0; j < numberOfBits; j++ )
+					{
+						newBits = ( newBits << 1 ) | ( oldBits & 1 );
+						oldBits = ( oldBits >> 1 );
+					}
+					rBits[i] = newBits;
+				}
+				reversedBits[numberOfBits - 1] = rBits;
+			}
+			return reversedBits[numberOfBits - 1];
+		}
+
+		// Get rotation of complex number
+        private static Complex[] GetComplexRotation( int numberOfBits, Direction direction )
+		{
+            int directionIndex = ( direction == Direction.Forward ) ? 0 : 1;
+
+			// check if the array is already calculated
+			if ( complexRotation[numberOfBits - 1, directionIndex] == null )
+			{
+				int			n = 1 << ( numberOfBits - 1 );
+				double		uR = 1.0;
+				double		uI = 0.0;
+				double		angle = System.Math.PI / n * (int) direction;
+				double		wR = System.Math.Cos( angle );
+				double		wI = System.Math.Sin( angle );
+				double		t;
+				Complex[]	rotation = new Complex[n];
+
+				for ( int i = 0; i < n; i++ )
+				{
+					rotation[i] = new Complex( uR, uI );
+					t = uR * wI + uI * wR;
+					uR = uR * wR - uI * wI;
+					uI = t;
+				}
+
+				complexRotation[numberOfBits - 1, directionIndex] = rotation;
+			}
+			return complexRotation[numberOfBits - 1, directionIndex];
+		}
+
+		// Reorder data for FFT using
+		private static void ReorderData( Complex[] data )
+		{
+			int len = data.Length;
+
+			// check data length
+			if ( ( len < minLength ) || ( len > maxLength ) || ( !HelperMethods.IsPowerOf2( len ) ) )
+				throw new ArgumentException( "Incorrect data length." );
+
+			int[] rBits = GetReversedBits( HelperMethods.Log2( len ) );
+
+			for ( int i = 0; i < len; i++ )
+			{
+				int s = rBits[i];
+
+				if ( s > i )
+				{
+					Complex t = data[i];
+					data[i] = data[s];
+					data[s] = t;
+				}
+			}
+		}
+
+        /// <summary>
+        /// One dimensional Fast Fourier Transform.
+        /// </summary>
+        /// 
+        /// <param name="data">Data to transform.</param>
+        /// <param name="direction">Transformation direction.</param>
+        /// 
+        /// <remarks><para><note>The method accepts <paramref name="data"/> array of 2<sup>n</sup> size
+        /// only, where <b>n</b> may vary in the [1, 14] range.</note></para></remarks>
+        /// 
+        /// <exception cref="ArgumentException">Incorrect data length.</exception>
+        /// 
+        public static void FFT(Complex[] data, Direction direction)
+        {
+            int n = data.Length;
+            int m = HelperMethods.Log2(n);
+
+            // reorder data first
+            ReorderData(data);
+
+            // compute FFT
+            int tn = 1, tm;
+
+            for (int k = 1; k <= m; k++)
             {
-                throw new ArgumentException($"{nameof(data)} must be a power of 2");
-            }
-            int m = (int)Math.Log(data.Length, 2);
-            int n, i, i1, j, k, i2, l, l1, l2;
-            float c1, c2, tx, ty, t1, t2, u1, u2, z;
+                Complex[] rotation = GetComplexRotation(k, direction);
 
-            // Calculate the number of points
-            n = 1;
-            for (i = 0; i < m; i++)
-                n *= 2;
+                tm = tn;
+                tn <<= 1;
 
-            // Do the bit reversal
-            i2 = n >> 1;
-            j = 0;
-            for (i = 0; i < n - 1; i++)
-            {
-                if (i < j)
+                for (int i = 0; i < tm; i++)
                 {
-                    tx = data[i].X;
-                    ty = data[i].Y;
-                    data[i].X = data[j].X;
-                    data[i].Y = data[j].Y;
-                    data[j].X = tx;
-                    data[j].Y = ty;
-                }
-                k = i2;
+                    Complex t = rotation[i];
 
-                while (k <= j)
-                {
-                    j -= k;
-                    k >>= 1;
-                }
-                j += k;
-            }
-
-            // Compute the FFT 
-            c1 = -1.0f;
-            c2 = 0.0f;
-            l2 = 1;
-            for (l = 0; l < m; l++)
-            {
-                l1 = l2;
-                l2 <<= 1;
-                u1 = 1.0f;
-                u2 = 0.0f;
-                for (j = 0; j < l1; j++)
-                {
-                    for (i = j; i < n; i += l2)
+                    for (int even = i; even < n; even += tn)
                     {
-                        i1 = i + l1;
-                        t1 = u1 * data[i1].X - u2 * data[i1].Y;
-                        t2 = u1 * data[i1].Y + u2 * data[i1].X;
-                        data[i1].X = data[i].X - t1;
-                        data[i1].Y = data[i].Y - t2;
-                        data[i].X += t1;
-                        data[i].Y += t2;
+                        int odd = even + tm;
+                        Complex ce = data[even];
+                        Complex co = data[odd];
+
+                        double tr = co.Re * t.Re - co.Im * t.Im;
+                        double ti = co.Re * t.Im + co.Im * t.Re;
+
+                        data[even].Re += tr;
+                        data[even].Im += ti;
+
+                        data[odd].Re = ce.Re - tr;
+                        data[odd].Im = ce.Im - ti;
                     }
-                    z = u1 * c1 - u2 * c2;
-                    u2 = u1 * c2 + u2 * c1;
-                    u1 = z;
                 }
-                c2 = (float)Math.Sqrt((1.0f - c1) / 2.0f);
-                if (forward)
-                    c2 = -c2;
-                c1 = (float)Math.Sqrt((1.0f + c1) / 2.0f);
             }
 
-            // Scaling for forward transform 
-            if (forward)
+            if (direction == Direction.Forward)
             {
-                for (i = 0; i < n; i++)
+                for (int i = 0; i < n; i++)
                 {
-                    data[i].X /= n;
-                    data[i].Y /= n;
+                    data[i].Re /= (double)n;
+                    data[i].Im /= (double)n;
                 }
             }
         }
