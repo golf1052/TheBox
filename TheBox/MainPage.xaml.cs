@@ -389,96 +389,95 @@ namespace TheBox
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
             List<float[]> amplitudeData = ProcessFrameOutput(audioFrame);
-            //List<float[]> channelData = GetFftData(ConvertTo512(amplitudeData));
+            List<float[]> channelData = GetFftData(ConvertTo512(amplitudeData));
             stopwatch.Stop();
             await PrintToLog(stopwatch.ElapsedMilliseconds.ToString());
-            //await PrintToLog(stopwatch.ElapsedMilliseconds.ToString());
-            //if (channelData.Count == 0)
-            //{
-            //    doneProcessing = true;
-            //    return;
-            //}
-            //for (int i = 0; i < channelData.Count / 2; i++)
-            //{
-            //    float[] leftChannel = channelData[i];
-            //    float[] rightChannel = channelData[i + 1];
-            //    //for (int j = 0; j < leftStrip.PixelCount; j++)
-            //    //{
-            //    //    Color leftColor;
-            //    //    Color rightColor;
-            //    //    if (j < 13)
-            //    //    {
-            //    //        leftColor = Colors.Red;
-            //    //        rightColor = Colors.Red;
-            //    //    }
-            //    //    else if (j < 39)
-            //    //    {
-            //    //        leftColor = Colors.Green;
-            //    //        leftColor = Colors.Green;
-            //    //    }
-            //    //    else if (j < 78)
-            //    //    {
-            //    //        leftColor = Colors.Blue;
-            //    //        rightColor = Colors.Blue;
-            //    //    }
+            if (channelData.Count == 0)
+            {
+                doneProcessing = true;
+                return;
+            }
+            for (int i = 0; i < channelData.Count / 2; i++)
+            {
+                float[] leftChannel = channelData[i];
+                float[] rightChannel = channelData[i + 1];
+                //for (int j = 0; j < leftStrip.PixelCount; j++)
+                //{
+                //    Color leftColor;
+                //    Color rightColor;
+                //    if (j < 13)
+                //    {
+                //        leftColor = Colors.Red;
+                //        rightColor = Colors.Red;
+                //    }
+                //    else if (j < 39)
+                //    {
+                //        leftColor = Colors.Green;
+                //        leftColor = Colors.Green;
+                //    }
+                //    else if (j < 78)
+                //    {
+                //        leftColor = Colors.Blue;
+                //        rightColor = Colors.Blue;
+                //    }
 
-            //    //    float leftAverage = 0;
-            //    //    for (int k = j * 2; k < (j + 1) * 2; k++)
-            //    //    {
-            //    //        leftAverage += Math.Abs(leftChannel[k]);
-            //    //    }
-            //    //    leftAverage /= 2.0f;
-            //    //    leftColor.A = (byte)(HelperMethods.Clamp(leftAverage * 1280, 0, 255));
-            //    //    leftStrip.strip[j] = leftColor;
+                //    float leftAverage = 0;
+                //    for (int k = j * 2; k < (j + 1) * 2; k++)
+                //    {
+                //        leftAverage += Math.Abs(leftChannel[k]);
+                //    }
+                //    leftAverage /= 2.0f;
+                //    leftColor.A = (byte)(HelperMethods.Clamp(leftAverage * 1280, 0, 255));
+                //    leftStrip.strip[j] = leftColor;
 
-            //    //    float rightAverage = 0;
-            //    //    for (int k = j * 2; k < (j + 1) * 2; k++)
-            //    //    {
-            //    //        rightAverage += Math.Abs(rightChannel[k]);
-            //    //    }
-            //    //    rightAverage /= 2;
-            //    //    rightColor.A = (byte)(HelperMethods.Clamp(rightAverage * 255, 0, 255));
-            //    //    rightStrip.strip[j] = rightColor;
+                //    float rightAverage = 0;
+                //    for (int k = j * 2; k < (j + 1) * 2; k++)
+                //    {
+                //        rightAverage += Math.Abs(rightChannel[k]);
+                //    }
+                //    rightAverage /= 2;
+                //    rightColor.A = (byte)(HelperMethods.Clamp(rightAverage * 255, 0, 255));
+                //    rightStrip.strip[j] = rightColor;
 
-            //    //    leftStrip.SendPixels();
-            //    //    rightStrip.SendPixels();
-            //    //}
-            //    await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-            //        () =>
-            //        {
-            //            for (int j = 0; j < rectangles.Count; j++)
-            //            {
-            //                //rectangles[j].Height = GammaCorrection(Math.Abs(leftChannel[j]), maxInput: 1, maxOutput: 1080);
-            //                //var height = Math.Abs(Math.Pow(Math.Abs(leftChannel[j]), 10));
-            //                var height = Math.Abs(leftChannel[j]);
-            //                if (j < 15)
-            //                {
-            //                    double max = double.Parse(lowBlock.Text);
-            //                    if (height > max)
-            //                    {
-            //                        lowBlock.Text = height.ToString();
-            //                    }
-            //                }
-            //                else if (j < 100)
-            //                {
-            //                    double max = double.Parse(midBlock.Text);
-            //                    if (height > max)
-            //                    {
-            //                        midBlock.Text = height.ToString();
-            //                    }
-            //                }
-            //                else
-            //                {
-            //                    double max = double.Parse(highBlock.Text);
-            //                    if (height > max)
-            //                    {
-            //                        highBlock.Text = height.ToString();
-            //                    }
-            //                }
-            //                rectangles[j].Height = height * 1080;
-            //            }
-            //        });
-            //}
+                //    leftStrip.SendPixels();
+                //    rightStrip.SendPixels();
+                //}
+                await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
+                    () =>
+                    {
+                        for (int j = 0; j < rectangles.Count; j++)
+                        {
+                            //rectangles[j].Height = GammaCorrection(Math.Abs(leftChannel[j]), maxInput: 1, maxOutput: 1080);
+                            //var height = Math.Abs(Math.Pow(Math.Abs(leftChannel[j]), 10));
+                            var height = Math.Abs(leftChannel[j]);
+                            if (j < 15)
+                            {
+                                double max = double.Parse(lowBlock.Text);
+                                if (height > max)
+                                {
+                                    lowBlock.Text = height.ToString();
+                                }
+                            }
+                            else if (j < 100)
+                            {
+                                double max = double.Parse(midBlock.Text);
+                                if (height > max)
+                                {
+                                    midBlock.Text = height.ToString();
+                                }
+                            }
+                            else
+                            {
+                                double max = double.Parse(highBlock.Text);
+                                if (height > max)
+                                {
+                                    highBlock.Text = height.ToString();
+                                }
+                            }
+                            rectangles[j].Height = height * 1080;
+                        }
+                    });
+            }
             //await DoUIThing(() =>
             //{
             //    debugBlock.Text = stopwatch.ElapsedMilliseconds.ToString();
@@ -706,39 +705,66 @@ namespace TheBox
             List<float[]> newChannelData = new List<float[]>();
             float[] leftChannel = channelData[0];
             float[] rightChannel = channelData[1];
+            List<Task<float[]>> tasks = new List<Task<float[]>>();
             for (int i = 0; i < leftChannel.Length / audioGraph.SamplesPerQuantum; i++)
             {
-                float[] tmpLeftChannelData = new float[512];
-                float[] tmpRightChannelData = new float[512];
-
-                // copy the left and right channel data into a new array
-                for (int j = i * audioGraph.SamplesPerQuantum; j < (i + 1) * audioGraph.SamplesPerQuantum; j++)
+                int i2 = i;
+                tasks.Add(Task.Factory.StartNew(() =>
                 {
-                    tmpLeftChannelData[j % audioGraph.SamplesPerQuantum] = leftChannel[j];
-                    tmpRightChannelData[j % audioGraph.SamplesPerQuantum] = rightChannel[j];
-                }
+                    return Create512(leftChannel, i2);
+                }));
 
-                // then pad the rest with 0s till we get to 512
-                for (int j = audioGraph.SamplesPerQuantum; j < 512; j++)
+                tasks.Add(Task.Factory.StartNew(() =>
                 {
-                    tmpLeftChannelData[j] = 0;
-                    tmpRightChannelData[j] = 0;
-                }
-                newChannelData.Add(tmpLeftChannelData);
-                newChannelData.Add(tmpRightChannelData);
+                    return Create512(rightChannel, i2);
+                }));
+            }
+            Task.WaitAll(tasks.ToArray());
+            foreach (var t in tasks)
+            {
+                newChannelData.Add(t.Result);
             }
             return newChannelData;
+        }
+
+        float[] Create512(float[] channelData, int i)
+        {
+            float[] tmpChannelData = new float[512];
+            // copy the left and right channel data into a new array
+            for (int j = i * audioGraph.SamplesPerQuantum; j < (i + 1) * audioGraph.SamplesPerQuantum; j++)
+            {
+                tmpChannelData[j % audioGraph.SamplesPerQuantum] = channelData[i];
+            }
+
+            // then pad the rest with 0s till we get to 512
+            for (int j = audioGraph.SamplesPerQuantum; j < 512; j++)
+            {
+                tmpChannelData[j] = 0;
+            }
+            return tmpChannelData;
         }
 
         List<float[]> GetFftData(List<float[]> channelData)
         {
             List<float[]> fftData = new List<float[]>();
+            List<Task<float[]>> tasks = new List<Task<float[]>>();
             for (int i = 0; i < channelData.Count / 2; i++)
             {
-                float[] leftChannel = GetFftChannelData(channelData[i]);
-                float[] rightChannel = GetFftChannelData(channelData[i + 1]);
-                fftData.Add(leftChannel);
-                fftData.Add(rightChannel);
+                int i2 = i;
+                tasks.Add(Task.Factory.StartNew(() =>
+                {
+                    return GetFftChannelData(channelData[i2]);
+                }));
+
+                tasks.Add(Task.Factory.StartNew(() =>
+                {
+                    return GetFftChannelData(channelData[i2 + 1]);
+                }));
+            }
+            Task.WaitAll(tasks.ToArray());
+            foreach (var t in tasks)
+            {
+                fftData.Add(t.Result);
             }
             return fftData;
         }
@@ -746,19 +772,30 @@ namespace TheBox
         float[] GetFftChannelData(float[] channelData)
         {
             Complex[] fftData = new Complex[512];
-            for (int j = 0; j < fftData.Length; j++)
+            Task[] complexTasks = new Task[fftData.Length];
+            for (int i = 0; i < fftData.Length; i++)
             {
-                Complex c = new Complex();
-                c.Re = channelData[j] * (float)Fft.HannWindow(j, fftData.Length);
-                fftData[j] = c;
+                int i2 = i;
+                complexTasks[i] = Task.Factory.StartNew(() =>
+                {
+                    Complex c = new Complex();
+                    c.Re = channelData[i2] * (float)Fft.HannWindow(i2, fftData.Length);
+                    fftData[i2] = c;
+                });
             }
+            Task.WaitAll(complexTasks);
             Fft.FFT(fftData, Fft.Direction.Forward);
-            //Fft.Calculate(fftData);
             float[] fftResult = new float[audioGraph.SamplesPerQuantum / 2];
-            for (int j = 0; j < fftResult.Length; j++)
+            Task[] mathTasks = new Task[fftResult.Length];
+            for (int i = 0; i < fftResult.Length; i++)
             {
-                fftResult[j] = (float)Math.Sqrt(Math.Pow(fftData[j].Re, 2) + Math.Pow(fftData[j].Im, 2));
+                int i2 = i;
+                mathTasks[i] = Task.Factory.StartNew(() =>
+                {
+                    fftResult[i2] = (float)Math.Sqrt(Math.Pow(fftData[i2].Re, 2) + Math.Pow(fftData[i2].Im, 2));
+                });
             }
+            Task.WaitAll(mathTasks);
             return fftResult;
         }
 

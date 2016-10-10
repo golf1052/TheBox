@@ -169,11 +169,17 @@ namespace TheBox
 
             if (direction == Direction.Forward)
             {
+                Task[] tasks = new Task[n];
                 for (int i = 0; i < n; i++)
                 {
-                    data[i].Re /= (double)n;
-                    data[i].Im /= (double)n;
+                    int i2 = i;
+                    tasks[i] = Task.Factory.StartNew(() =>
+                    {
+                        data[i2].Re /= (double)n;
+                        data[i2].Im /= (double)n;
+                    });
                 }
+                Task.WaitAll(tasks);
             }
         }
 
