@@ -377,7 +377,7 @@ namespace TheBox
             Debug.WriteLine("UNRECOVERABLE ERRORRRRRR");
         }
 
-        private async void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
+        private void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
         {
             //if (!doneProcessing)
             //{
@@ -389,96 +389,96 @@ namespace TheBox
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
             List<float[]> amplitudeData = ProcessFrameOutput(audioFrame);
-            //List<float[]> channelData = GetFftData(ConvertTo512(amplitudeData));
+            List<float[]> channelData = GetFftData(ConvertTo512(amplitudeData));
             stopwatch.Stop();
-            await PrintToLog(stopwatch.ElapsedMilliseconds.ToString());
             //await PrintToLog(stopwatch.ElapsedMilliseconds.ToString());
-            //if (channelData.Count == 0)
-            //{
-            //    doneProcessing = true;
-            //    return;
-            //}
-            //for (int i = 0; i < channelData.Count / 2; i++)
-            //{
-            //    float[] leftChannel = channelData[i];
-            //    float[] rightChannel = channelData[i + 1];
-            //    //for (int j = 0; j < leftStrip.PixelCount; j++)
-            //    //{
-            //    //    Color leftColor;
-            //    //    Color rightColor;
-            //    //    if (j < 13)
-            //    //    {
-            //    //        leftColor = Colors.Red;
-            //    //        rightColor = Colors.Red;
-            //    //    }
-            //    //    else if (j < 39)
-            //    //    {
-            //    //        leftColor = Colors.Green;
-            //    //        leftColor = Colors.Green;
-            //    //    }
-            //    //    else if (j < 78)
-            //    //    {
-            //    //        leftColor = Colors.Blue;
-            //    //        rightColor = Colors.Blue;
-            //    //    }
+            if (channelData.Count == 0)
+            {
+                doneProcessing = true;
+                return;
+            }
+            for (int i = 0; i < channelData.Count / 2; i++)
+            {
+                float[] leftChannel = channelData[i];
+                float[] rightChannel = channelData[i + 1];
+                //for (int j = 0; j < leftStrip.PixelCount; j++)
+                //{
+                //    Color leftColor;
+                //    Color rightColor;
+                //    if (j < 13)
+                //    {
+                //        leftColor = Colors.Red;
+                //        rightColor = Colors.Red;
+                //    }
+                //    else if (j < 39)
+                //    {
+                //        leftColor = Colors.Green;
+                //        leftColor = Colors.Green;
+                //    }
+                //    else if (j < 78)
+                //    {
+                //        leftColor = Colors.Blue;
+                //        rightColor = Colors.Blue;
+                //    }
 
-            //    //    float leftAverage = 0;
-            //    //    for (int k = j * 2; k < (j + 1) * 2; k++)
-            //    //    {
-            //    //        leftAverage += Math.Abs(leftChannel[k]);
-            //    //    }
-            //    //    leftAverage /= 2.0f;
-            //    //    leftColor.A = (byte)(HelperMethods.Clamp(leftAverage * 1280, 0, 255));
-            //    //    leftStrip.strip[j] = leftColor;
+                //    float leftAverage = 0;
+                //    for (int k = j * 2; k < (j + 1) * 2; k++)
+                //    {
+                //        leftAverage += Math.Abs(leftChannel[k]);
+                //    }
+                //    leftAverage /= 2.0f;
+                //    leftColor.A = (byte)(HelperMethods.Clamp(leftAverage * 1280, 0, 255));
+                //    leftStrip.strip[j] = leftColor;
 
-            //    //    float rightAverage = 0;
-            //    //    for (int k = j * 2; k < (j + 1) * 2; k++)
-            //    //    {
-            //    //        rightAverage += Math.Abs(rightChannel[k]);
-            //    //    }
-            //    //    rightAverage /= 2;
-            //    //    rightColor.A = (byte)(HelperMethods.Clamp(rightAverage * 255, 0, 255));
-            //    //    rightStrip.strip[j] = rightColor;
+                //    float rightAverage = 0;
+                //    for (int k = j * 2; k < (j + 1) * 2; k++)
+                //    {
+                //        rightAverage += Math.Abs(rightChannel[k]);
+                //    }
+                //    rightAverage /= 2;
+                //    rightColor.A = (byte)(HelperMethods.Clamp(rightAverage * 255, 0, 255));
+                //    rightStrip.strip[j] = rightColor;
 
-            //    //    leftStrip.SendPixels();
-            //    //    rightStrip.SendPixels();
-            //    //}
-            //    await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-            //        () =>
-            //        {
-            //            for (int j = 0; j < rectangles.Count; j++)
-            //            {
-            //                //rectangles[j].Height = GammaCorrection(Math.Abs(leftChannel[j]), maxInput: 1, maxOutput: 1080);
-            //                //var height = Math.Abs(Math.Pow(Math.Abs(leftChannel[j]), 10));
-            //                var height = Math.Abs(leftChannel[j]);
-            //                if (j < 15)
-            //                {
-            //                    double max = double.Parse(lowBlock.Text);
-            //                    if (height > max)
-            //                    {
-            //                        lowBlock.Text = height.ToString();
-            //                    }
-            //                }
-            //                else if (j < 100)
-            //                {
-            //                    double max = double.Parse(midBlock.Text);
-            //                    if (height > max)
-            //                    {
-            //                        midBlock.Text = height.ToString();
-            //                    }
-            //                }
-            //                else
-            //                {
-            //                    double max = double.Parse(highBlock.Text);
-            //                    if (height > max)
-            //                    {
-            //                        highBlock.Text = height.ToString();
-            //                    }
-            //                }
-            //                rectangles[j].Height = height * 1080;
-            //            }
-            //        });
-            //}
+                //    leftStrip.SendPixels();
+                //    rightStrip.SendPixels();
+                //}
+                Task t = Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
+                    () =>
+                    {
+                        for (int j = 0; j < rectangles.Count; j++)
+                        {
+                            //rectangles[j].Height = GammaCorrection(Math.Abs(leftChannel[j]), maxInput: 1, maxOutput: 1080);
+                            //var height = Math.Abs(Math.Pow(Math.Abs(leftChannel[j]), 10));
+                            var height = Math.Abs(leftChannel[j]);
+                            if (j < 15)
+                            {
+                                double max = double.Parse(lowBlock.Text);
+                                if (height > max)
+                                {
+                                    lowBlock.Text = height.ToString();
+                                }
+                            }
+                            else if (j < 100)
+                            {
+                                double max = double.Parse(midBlock.Text);
+                                if (height > max)
+                                {
+                                    midBlock.Text = height.ToString();
+                                }
+                            }
+                            else
+                            {
+                                double max = double.Parse(highBlock.Text);
+                                if (height > max)
+                                {
+                                    highBlock.Text = height.ToString();
+                                }
+                            }
+                            rectangles[j].Height = height * 1080;
+                        }
+                    }).AsTask();
+                t.Wait();
+            }
             //await DoUIThing(() =>
             //{
             //    debugBlock.Text = stopwatch.ElapsedMilliseconds.ToString();
