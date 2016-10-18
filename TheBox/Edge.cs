@@ -33,6 +33,10 @@ namespace TheBox
 
         public List<Color> ledColors;
 
+        private AdjustableMax leftMax;
+        private AdjustableMax rightMax;
+        public bool Reverse { get; set; }
+
         public Edge(int start, int end, DotStarStrip strip)
         {
             this.strip = strip;
@@ -45,6 +49,8 @@ namespace TheBox
             }
             brightness = 255;
             ledColors = new List<Color>();
+            leftMax = new AdjustableMax();
+            rightMax = new AdjustableMax();
         }
 
         public async Task DoLine()
@@ -94,6 +100,64 @@ namespace TheBox
         public void Update()
         {
             strip.SendPixels();
+        }
+
+        public void UpdateLeft(float value, Color color)
+        {
+            leftMax.Value = value;
+            float val = leftMax.Value;
+            if (!Reverse)
+            {
+                DoMiddleToBeginning(val, color);
+            }
+            else
+            {
+                DoMiddleToEnd(val, color);
+            }
+        }
+
+        public void UpdateRight(float value, Color color)
+        {
+            rightMax.Value = value;
+            float val = rightMax.Value;
+            if (!Reverse)
+            {
+                DoMiddleToEnd(val, color);
+            }
+            else
+            {
+                DoMiddleToBeginning(val, color);
+            }
+        }
+
+        private void DoMiddleToBeginning(float value, Color color)
+        {
+            for (int i = 5; i >= 0; i--)
+            {
+                if (i >= 6 - Math.Floor(value * 6f))
+                {
+                    strip.strip[leds[i]] = color;
+                }
+                else
+                {
+                    strip.strip[leds[i]] = Colors.Black;
+                }
+            }
+        }
+
+        private void DoMiddleToEnd(float value, Color color)
+        {
+            for (int i = 7; i < 13; i++)
+            {
+                if (i < Math.Floor(value * 6f) + 7)
+                {
+                    strip.strip[leds[i]] = color;
+                }
+                else
+                {
+                    strip.strip[leds[i]] = Colors.Black;
+                }
+            }
         }
     }
 }

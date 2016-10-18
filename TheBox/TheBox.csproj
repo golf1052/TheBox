@@ -93,9 +93,11 @@
     <None Include="project.json" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AdjustableMax.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="BeatDetector.cs" />
     <Compile Include="Complex.cs" />
     <Compile Include="Cube.cs" />
     <Compile Include="DotStarStrip.cs" />

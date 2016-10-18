@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,31 @@ namespace TheBox
 {
     public static class HelperMethods
     {
+        public static float Average(float[] array, int start, int stop)
+        {
+            float average = 0;
+            for (int i = start; i < stop; i++)
+            {
+                average += array[i];
+            }
+            return average / (stop - start);
+        }
+
+        public static float Average(float[] array, int start)
+        {
+            return Average(array, start, array.Length);
+        }
+
+        public static float Average(ICollection<float> collection)
+        {
+            float average = 0;
+            foreach (float value in collection)
+            {
+                average += value;
+            }
+            return average / collection.Count;
+        }
+
         public static double Clamp(double value, double min, double max)
         {
             if (value < min)

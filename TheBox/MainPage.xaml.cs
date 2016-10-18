@@ -56,10 +56,15 @@ namespace TheBox
         DateTime lastBeat = DateTime.MinValue;
         TimeSpan timeBetweenBeats = TimeSpan.Zero;
         float beatValue = 0;
+        BeatDetector beatDetector;
 
         Cube cube;
 
         List<Rectangle> rectangles;
+        List<AdjustableMax> maxes;
+
+        const int LowCutoff = 15;
+        const int MidCutoff = 100;
 
         public MainPage()
         {
@@ -68,14 +73,16 @@ namespace TheBox
             rightStrip = new DotStarStrip(78, "SPI1");
             cube = new Cube(leftStrip, rightStrip);
             rectangles = new List<Rectangle>();
+            maxes = new List<AdjustableMax>();
+            beatDetector = new BeatDetector(50);
             for (int i = 0; i < 220; i++)
             {
                 Rectangle rect = new Rectangle();
-                if (i < 15)
+                if (i < LowCutoff)
                 {
                     rect.Fill = new SolidColorBrush(Colors.Red);
                 }
-                else if (i < 100)
+                else if (i < MidCutoff)
                 {
                     rect.Fill = new SolidColorBrush(Colors.Green);
                 }
@@ -90,6 +97,7 @@ namespace TheBox
                 rect.Margin = new Thickness(i * 8, 0, 0, 0);
                 rectangleGrid.Children.Add(rect);
                 rectangles.Add(rect);
+                maxes.Add(new AdjustableMax());
             }
         }
 
@@ -401,6 +409,48 @@ namespace TheBox
             {
                 float[] leftChannel = channelData[i];
                 float[] rightChannel = channelData[i + 1];
+                float leftLowAverage = HelperMethods.Average(leftChannel, 0, LowCutoff);
+                float rightLowAverage = HelperMethods.Average(rightChannel, 0, LowCutoff);
+                float leftMidAverage = HelperMethods.Average(leftChannel, LowCutoff, MidCutoff);
+                float rightMidAverage = HelperMethods.Average(rightChannel, LowCutoff, MidCutoff);
+                float leftHighAverage = HelperMethods.Average(leftChannel, MidCutoff);
+                float rightHighAverage = HelperMethods.Average(rightChannel, MidCutoff);
+
+                // set strip sides to repeating patterns, increase pattern loop speed based upon loudness of level
+                beatDetector.UpdateBeat((leftLowAverage + rightLowAverage) / 2);
+                if (beatDetector.Beat)
+                {
+                    cube.SetColor(Colors.White);
+                }
+                else
+                {
+                    cube.Reset();
+                    cube.bottomFrontEdge.UpdateLeft(leftLowAverage, Colors.Red);
+                    cube.bottomFrontEdge.UpdateRight(rightLowAverage, Colors.Red);
+                    cube.bottomRightEdge.UpdateLeft(leftLowAverage, Colors.Red);
+                    cube.bottomRightEdge.UpdateRight(rightLowAverage, Colors.Red);
+                    cube.bottomBackEdge.UpdateLeft(leftLowAverage, Colors.Red);
+                    cube.bottomBackEdge.UpdateRight(rightLowAverage, Colors.Red);
+                    cube.bottomLeftEdge.UpdateLeft(leftLowAverage, Colors.Red);
+                    cube.bottomLeftEdge.UpdateRight(rightLowAverage, Colors.Red);
+                    cube.frontLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+                    cube.frontLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+                    cube.rightLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+                    cube.rightLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+                    cube.backLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+                    cube.backLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+                    cube.leftLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+                    cube.leftLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+                    cube.frontTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+                    cube.frontTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+                    cube.rightTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+                    cube.rightTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+                    cube.backTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+                    cube.backTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+                    cube.leftTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+                    cube.leftTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+                }
+                cube.Update();
                 //for (int j = 0; j < leftStrip.PixelCount; j++)
                 //{
                 //    Color leftColor;
@@ -442,42 +492,43 @@ namespace TheBox
                 //    leftStrip.SendPixels();
                 //    rightStrip.SendPixels();
                 //}
-                Task t = Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-                    () =>
-                    {
-                        for (int j = 0; j < rectangles.Count; j++)
-                        {
-                            //rectangles[j].Height = GammaCorrection(Math.Abs(leftChannel[j]), maxInput: 1, maxOutput: 1080);
-                            //var height = Math.Abs(Math.Pow(Math.Abs(leftChannel[j]), 10));
-                            var height = Math.Abs(leftChannel[j]);
-                            if (j < 15)
-                            {
-                                double max = double.Parse(lowBlock.Text);
-                                if (height > max)
-                                {
-                                    lowBlock.Text = height.ToString();
-                                }
-                            }
-                            else if (j < 100)
-                            {
-                                double max = double.Parse(midBlock.Text);
-                                if (height > max)
-                                {
-                                    midBlock.Text = height.ToString();
-                                }
-                            }
-                            else
-                            {
-                                double max = double.Parse(highBlock.Text);
-                                if (height > max)
-                                {
-                                    highBlock.Text = height.ToString();
-                                }
-                            }
-                            rectangles[j].Height = height * 1080;
-                        }
-                    }).AsTask();
-                t.Wait();
+                //Task t = Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
+                //    () =>
+                //    {
+                //        for (int j = 0; j < rectangles.Count; j++)
+                //        {
+                //            //rectangles[j].Height = GammaCorrection(Math.Abs(leftChannel[j]), maxInput: 1, maxOutput: 1080);
+                //            //var height = Math.Abs(Math.Pow(Math.Abs(leftChannel[j]), 10));
+                //            var height = Math.Abs(leftChannel[j]);
+                //            maxes[i].Value = height;
+                //            if (j < LowCutoff)
+                //            {
+                //                double max = double.Parse(lowBlock.Text);
+                //                if (height > max)
+                //                {
+                //                    lowBlock.Text = height.ToString();
+                //                }
+                //            }
+                //            else if (j < MidCutoff)
+                //            {
+                //                double max = double.Parse(midBlock.Text);
+                //                if (height > max)
+                //                {
+                //                    midBlock.Text = height.ToString();
+                //                }
+                //            }
+                //            else
+                //            {
+                //                double max = double.Parse(highBlock.Text);
+                //                if (height > max)
+                //                {
+                //                    highBlock.Text = height.ToString();
+                //                }
+                //            }
+                //            rectangles[j].Height = maxes[i].Value * 1080;
+                //        }
+                //    }).AsTask();
+                //t.Wait();
             }
             //await DoUIThing(() =>
             //{
@@ -757,7 +808,7 @@ namespace TheBox
             float[] fftResult = new float[audioGraph.SamplesPerQuantum / 2];
             for (int j = 0; j < fftResult.Length; j++)
             {
-                fftResult[j] = (float)Math.Sqrt(Math.Pow(fftData[j].Re, 2) + Math.Pow(fftData[j].Im, 2));
+                fftResult[j] = Math.Abs((float)Math.Sqrt(Math.Pow(fftData[j].Re, 2) + Math.Pow(fftData[j].Im, 2)));
             }
             return fftResult;
         }
