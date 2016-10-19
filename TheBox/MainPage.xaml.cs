@@ -42,6 +42,14 @@ namespace TheBox
             0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B
         };
 
+        public enum Modes
+        {
+            Volumes,
+            SpeedRainbow,
+            SpeedAlternating
+        }
+        Modes currentMode;
+
         DotStarStrip leftStrip;
         DotStarStrip rightStrip;
 
@@ -99,6 +107,7 @@ namespace TheBox
                 rectangles.Add(rect);
                 maxes.Add(new AdjustableMax());
             }
+            currentMode = Modes.SpeedRainbow;
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -168,6 +177,7 @@ namespace TheBox
             frameOutputNode = audioGraph.CreateFrameOutputNode();
             inputNode.AddOutgoingConnection(frameOutputNode);
             inputNode.AddOutgoingConnection(outputNode);
+            cube.SetSpeedStripLedColors(LedColorLists.rainbowColors);
             audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
             // z = sin(sqrt(x2+y2)) from 0 to 2p1
             audioGraph.UnrecoverableErrorOccurred += AudioGraph_UnrecoverableErrorOccurred;
@@ -387,19 +397,12 @@ namespace TheBox
 
         private void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
         {
-            //if (!doneProcessing)
-            //{
-            //    return;
-            //}
-            //doneProcessing = false;
-            //await PrintToLog("processed");
             AudioFrame audioFrame = frameOutputNode.GetFrame();
             Stopwatch stopwatch = new Stopwatch();
             stopwatch.Start();
             List<float[]> amplitudeData = ProcessFrameOutput(audioFrame);
             List<float[]> channelData = GetFftData(ConvertTo512(amplitudeData));
             stopwatch.Stop();
-            //await PrintToLog(stopwatch.ElapsedMilliseconds.ToString());
             if (channelData.Count == 0)
             {
                 doneProcessing = true;
@@ -409,329 +412,95 @@ namespace TheBox
             {
                 float[] leftChannel = channelData[i];
                 float[] rightChannel = channelData[i + 1];
-                float leftLowAverage = HelperMethods.Average(leftChannel, 0, LowCutoff);
-                float rightLowAverage = HelperMethods.Average(rightChannel, 0, LowCutoff);
-                float leftMidAverage = HelperMethods.Average(leftChannel, LowCutoff, MidCutoff);
-                float rightMidAverage = HelperMethods.Average(rightChannel, LowCutoff, MidCutoff);
-                float leftHighAverage = HelperMethods.Average(leftChannel, MidCutoff);
-                float rightHighAverage = HelperMethods.Average(rightChannel, MidCutoff);
-
-                // set strip sides to repeating patterns, increase pattern loop speed based upon loudness of level
-                beatDetector.UpdateBeat((leftLowAverage + rightLowAverage) / 2);
-                if (beatDetector.Beat)
+                if (currentMode == Modes.Volumes)
                 {
-                    cube.SetColor(Colors.White);
+                    LowMidHighVolumeBars(leftChannel, rightChannel);
                 }
                 else
                 {
-                    cube.Reset();
-                    cube.bottomFrontEdge.UpdateLeft(leftLowAverage, Colors.Red);
-                    cube.bottomFrontEdge.UpdateRight(rightLowAverage, Colors.Red);
-                    cube.bottomRightEdge.UpdateLeft(leftLowAverage, Colors.Red);
-                    cube.bottomRightEdge.UpdateRight(rightLowAverage, Colors.Red);
-                    cube.bottomBackEdge.UpdateLeft(leftLowAverage, Colors.Red);
-                    cube.bottomBackEdge.UpdateRight(rightLowAverage, Colors.Red);
-                    cube.bottomLeftEdge.UpdateLeft(leftLowAverage, Colors.Red);
-                    cube.bottomLeftEdge.UpdateRight(rightLowAverage, Colors.Red);
-                    cube.frontLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-                    cube.frontLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-                    cube.rightLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-                    cube.rightLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-                    cube.backLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-                    cube.backLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-                    cube.leftLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-                    cube.leftLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-                    cube.frontTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-                    cube.frontTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-                    cube.rightTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-                    cube.rightTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-                    cube.backTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-                    cube.backTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-                    cube.leftTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-                    cube.leftTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+                    LowMidHighSpeedBars(leftChannel, rightChannel);
                 }
-                cube.Update();
-                //for (int j = 0; j < leftStrip.PixelCount; j++)
-                //{
-                //    Color leftColor;
-                //    Color rightColor;
-                //    if (j < 13)
-                //    {
-                //        leftColor = Colors.Red;
-                //        rightColor = Colors.Red;
-                //    }
-                //    else if (j < 39)
-                //    {
-                //        leftColor = Colors.Green;
-                //        leftColor = Colors.Green;
-                //    }
-                //    else if (j < 78)
-                //    {
-                //        leftColor = Colors.Blue;
-                //        rightColor = Colors.Blue;
-                //    }
-
-                //    float leftAverage = 0;
-                //    for (int k = j * 2; k < (j + 1) * 2; k++)
-                //    {
-                //        leftAverage += Math.Abs(leftChannel[k]);
-                //    }
-                //    leftAverage /= 2.0f;
-                //    leftColor.A = (byte)(HelperMethods.Clamp(leftAverage * 1280, 0, 255));
-                //    leftStrip.strip[j] = leftColor;
-
-                //    float rightAverage = 0;
-                //    for (int k = j * 2; k < (j + 1) * 2; k++)
-                //    {
-                //        rightAverage += Math.Abs(rightChannel[k]);
-                //    }
-                //    rightAverage /= 2;
-                //    rightColor.A = (byte)(HelperMethods.Clamp(rightAverage * 255, 0, 255));
-                //    rightStrip.strip[j] = rightColor;
-
-                //    leftStrip.SendPixels();
-                //    rightStrip.SendPixels();
-                //}
-                //Task t = Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-                //    () =>
-                //    {
-                //        for (int j = 0; j < rectangles.Count; j++)
-                //        {
-                //            //rectangles[j].Height = GammaCorrection(Math.Abs(leftChannel[j]), maxInput: 1, maxOutput: 1080);
-                //            //var height = Math.Abs(Math.Pow(Math.Abs(leftChannel[j]), 10));
-                //            var height = Math.Abs(leftChannel[j]);
-                //            maxes[i].Value = height;
-                //            if (j < LowCutoff)
-                //            {
-                //                double max = double.Parse(lowBlock.Text);
-                //                if (height > max)
-                //                {
-                //                    lowBlock.Text = height.ToString();
-                //                }
-                //            }
-                //            else if (j < MidCutoff)
-                //            {
-                //                double max = double.Parse(midBlock.Text);
-                //                if (height > max)
-                //                {
-                //                    midBlock.Text = height.ToString();
-                //                }
-                //            }
-                //            else
-                //            {
-                //                double max = double.Parse(highBlock.Text);
-                //                if (height > max)
-                //                {
-                //                    highBlock.Text = height.ToString();
-                //                }
-                //            }
-                //            rectangles[j].Height = maxes[i].Value * 1080;
-                //        }
-                //    }).AsTask();
-                //t.Wait();
             }
-            //await DoUIThing(() =>
-            //{
-            //    debugBlock.Text = stopwatch.ElapsedMilliseconds.ToString();
-            //});
-            //await PrintToLog("finished sending pixels");
-            //float[] leftChannel = channelData[0];
-            //Complex[] leftFft = new Complex[256];
-            //for (int i = 0; i < leftFft.Length; i++)
-            //{
-            //    Complex c = new Complex();
-            //    c.X = leftChannel[i] * (float)Fft.HannWindow(i, leftFft.Length);
-            //    leftFft[i] = c;
-            //}
-            //Fft.Calculate(leftFft);
-            //float[] leftFftResult = new float[leftFft.Length];
-            //for (int i = 0; i < leftFft.Length; i++)
-            //{
-            //    leftFftResult[i] = (float)Math.Sqrt(Math.Pow(leftFft[i].X, 2) + Math.Pow(leftFft[i].Y, 2));
-            //}
-            //float[] rightChannel = channelData[1];
-            //float leftAverage = 0;
-            //float rightAverage = 0;
-            //float leftPositiveAverage = 0;
-            //int leftPositiveAdded = 0;
-            //float leftNegativeAverage = 0;
-            //int leftNegativeAdded = 0;
-            //float rightPositiveAverage = 0;
-            //int rightPositiveAdded = 0;
-            //float rightNegativeAverage = 0;
-            //int rightNegativeAdded = 0;
-            //for (int i = 0; i < leftChannel.Length; i++)
-            //{
-            //    float leftValue = leftChannel[i];
-            //    leftAverage += Math.Abs(leftValue);
-            //    if (leftValue < 0)
-            //    {
-            //        leftNegativeAverage += leftValue;
-            //        leftNegativeAdded++;
-            //    }
-            //    else
-            //    {
-            //        leftPositiveAverage += leftValue;
-            //        leftPositiveAdded++;
-            //    }
+        }
 
-            //    float rightValue = rightChannel[i];
-            //    rightAverage += Math.Abs(rightValue);
-            //    if (rightValue < 0)
-            //    {
-            //        rightNegativeAverage += rightValue;
-            //        rightNegativeAdded++;
-            //    }
-            //    else
-            //    {
-            //        rightPositiveAverage += rightValue;
-            //        rightPositiveAdded++;
-            //    }
-            //}
-            //if (leftPositiveAdded > 0)
-            //{
-            //    leftPositiveAverage /= leftPositiveAdded;
-            //}
-            //if (leftNegativeAdded > 0)
-            //{
-            //    leftNegativeAverage /= leftNegativeAdded;
-            //}
-            //if (rightPositiveAdded > 0)
-            //{
-            //    rightPositiveAverage /= rightPositiveAdded;
-            //}
-            //if (rightNegativeAdded > 0)
-            //{
-            //    rightNegativeAverage /= rightNegativeAdded;
-            //}
-            //if (leftChannel.Length > 0)
-            //{
-            //    leftAverage /= leftChannel.Length;
-            //}
-            //if (rightChannel.Length > 0)
-            //{
-            //    rightAverage /= rightChannel.Length;
-            //}
-            //await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-            //    () =>
-            //    {
-            //        leftPositiveRect.Height = leftPositiveAverage * 100;
-            //        leftNegativeRect.Height = Math.Abs(leftNegativeAverage) * 100;
-            //        rightPositiveRect.Height = rightPositiveAverage * 100;
-            //        rightNegativeRect.Height = Math.Abs(rightNegativeAverage) * 100;
-            //    });
-            //if (leftChannel.Length == 0)
-            //{
-            //    //leftStrip.ResetPixels();
-            //    //rightStrip.ResetPixels();
-            //    //doneProcessing = true;
-            //    return;
-            //}
-            //float leftAverage = 0;
-            //float rightAverage = 0;
-            //for (int i = 0; i < leftChannel.Length; i++)
-            //{
-            //    float leftValue = leftChannel[i];
-            //    leftAverage += Math.Abs(leftValue);
-            //    float rightValue = rightChannel[i];
-            //    rightAverage += Math.Abs(rightValue);
-            //}
-            //if (leftAverage == 0 || rightAverage == 0)
-            //{
-            //    //leftStrip.ResetPixels();
-            //    //rightStrip.ResetPixels();
-            //    doneProcessing = true;
-            //    return;
-            //}
-            //if (leftChannel.Length > 0)
-            //{
-            //    //Debug.WriteLine(leftChannel.Length);
-            //    leftAverage /= leftChannel.Length;
-            //}
-            //if (rightChannel.Length > 0)
-            //{
-            //    //Debug.WriteLine(rightChannel.Length);
-            //    rightAverage /= rightChannel.Length;
-            //}
-            //List<Color> leftStripColors = new List<Color>();
-            //List<Color> rightStripColors = new List<Color>();
-            //float currentAverage = (leftAverage + rightAverage) / 2;
-            //bool beat = false;
-            //if (currentAverage > beatValue - 0.1)
-            //{
-            //    lastBeat = DateTime.Now;
-            //    beatValue = currentAverage;
-            //    beat = true;
-            //    if (lastBeat == DateTime.MinValue)
-            //    {
-            //        lastBeat = DateTime.Now;
-            //        beatValue = currentAverage;
-            //    }
-            //    else
-            //    {
-            //        DateTime now = DateTime.Now;
-            //        TimeSpan difference = ((now - lastBeat) - timeBetweenBeats).Duration();
-            //        if (timeBetweenBeats == TimeSpan.Zero)
-            //        {
-            //            timeBetweenBeats = now - lastBeat;
-            //            lastBeat = now;
-            //            beatValue = currentAverage;
-            //        }
-            //        else if (difference.Ticks >= timeBetweenBeats.Ticks - timeBetweenBeats.Ticks / 4 &&
-            //            difference.Ticks <= timeBetweenBeats.Ticks - timeBetweenBeats.Ticks / 4)
-            //        {
-            //            timeBetweenBeats = now - lastBeat;
-            //            lastBeat = now;
-            //            beatValue = currentAverage;
-            //            beat = true;
-            //        }
-            //    }                
-            //}
-            //await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-            //    () =>
-            //    {
-            //        currentAverageBlock.Text = currentAverage.ToString();
-            //        lastBeatBlock.Text = lastBeat.ToString();
-            //        timeBetweenBeatsBlock.Text = timeBetweenBeats.ToString();
-            //        beatValueBlock.Text = beatValue.ToString();
-            //    });
-            //if (beat)
-            //{
-            //    leftStripColors = leftStrip.GetResetPixels(Colors.OrangeRed);
-            //    //rightStripColors = rightStrip.GetResetPixels(Colors.OrangeRed);
-            //}
-            //else
-            //{
-            //    leftStripColors = leftStrip.GetResetPixels();
-            //    //rightStripColors = rightStrip.GetResetPixels();
-            //}
-            //for (int i = leftStrip.PixelCount / 2 - 1; i < Math.Ceiling(leftPositiveAverage * leftStrip.PixelCount); i++)
-            //{
-            //    leftStripColors[i] = Colors.White;
-            //}
-            //for (int i = leftStrip.PixelCount / 2 - 2; i > Math.Ceiling((1 - Math.Abs(leftNegativeAverage)) * (leftStrip.PixelCount / 2)); i--)
-            //{
-            //    leftStripColors[i] = Colors.White;
-            //}
-            //for (int i = rightStrip.PixelCount / 2 - 1; i < Math.Ceiling(rightPositiveAverage * rightStrip.PixelCount); i++)
-            //{
-            //    rightStripColors[i] = Colors.White;
-            //}
-            //for (int i = rightStrip.PixelCount / 2 - 2; i > Math.Ceiling((1 - Math.Abs(rightNegativeAverage)) * (rightStrip.PixelCount / 2)); i--)
-            //{
-            //    rightStripColors[i] = Colors.White;
-            //}
-            //for (int i = 0; i < Math.Ceiling(leftAverage * leftStrip.PixelCount); i++)
-            //{
-            //    leftStripColors[i] = Colors.CornflowerBlue;
-            //}
-            //for (int i = 0; i < Math.Ceiling(rightAverage * rightStrip.PixelCount); i++)
-            //{
-            //    rightStripColors[i] = Colors.CornflowerBlue;
-            //}
-            //leftStrip.SendPixels(leftStripColors);
-            //rightStrip.SendPixels(rightStripColors);
-            //doneProcessing = true;
+        void LowMidHighSpeedBars(float[] leftChannel, float[] rightChannel)
+        {
+            float leftLowAverage = HelperMethods.Average(leftChannel, 0, LowCutoff);
+            float rightLowAverage = HelperMethods.Average(rightChannel, 0, LowCutoff);
+            float leftMidAverage = HelperMethods.Average(leftChannel, LowCutoff, MidCutoff);
+            float rightMidAverage = HelperMethods.Average(rightChannel, LowCutoff, MidCutoff);
+            float leftHighAverage = HelperMethods.Average(leftChannel, MidCutoff);
+            float rightHighAverage = HelperMethods.Average(rightChannel, MidCutoff);
+            cube.bottomFrontEdge.speedStripBeginning.UpdateSpeed(leftLowAverage);
+            cube.bottomFrontEdge.speedStripEnd.UpdateSpeed(rightLowAverage);
+            cube.bottomRightEdge.speedStripBeginning.UpdateSpeed(leftLowAverage);
+            cube.bottomRightEdge.speedStripEnd.UpdateSpeed(rightLowAverage);
+            cube.bottomBackEdge.speedStripBeginning.UpdateSpeed(leftLowAverage);
+            cube.bottomBackEdge.speedStripEnd.UpdateSpeed(rightLowAverage);
+            cube.bottomLeftEdge.speedStripBeginning.UpdateSpeed(leftLowAverage);
+            cube.bottomLeftEdge.speedStripEnd.UpdateSpeed(rightLowAverage);
+            cube.frontLeftEdge.speedStripBeginning.UpdateSpeed(leftMidAverage);
+            cube.frontLeftEdge.speedStripEnd.UpdateSpeed(rightMidAverage);
+            cube.rightLeftEdge.speedStripBeginning.UpdateSpeed(leftMidAverage);
+            cube.rightLeftEdge.speedStripEnd.UpdateSpeed(rightMidAverage);
+            cube.backLeftEdge.speedStripBeginning.UpdateSpeed(leftMidAverage);
+            cube.backLeftEdge.speedStripEnd.UpdateSpeed(rightMidAverage);
+            cube.leftLeftEdge.speedStripBeginning.UpdateSpeed(leftMidAverage);
+            cube.leftLeftEdge.speedStripEnd.UpdateSpeed(rightMidAverage);
+            cube.frontTopEdge.speedStripBeginning.UpdateSpeed(leftHighAverage);
+            cube.frontTopEdge.speedStripEnd.UpdateSpeed(rightHighAverage);
+            cube.rightTopEdge.speedStripBeginning.UpdateSpeed(leftHighAverage);
+            cube.rightTopEdge.speedStripEnd.UpdateSpeed(rightHighAverage);
+            cube.backTopEdge.speedStripBeginning.UpdateSpeed(leftHighAverage);
+            cube.backTopEdge.speedStripEnd.UpdateSpeed(rightHighAverage);
+            cube.leftTopEdge.speedStripBeginning.UpdateSpeed(leftHighAverage);
+            cube.leftTopEdge.speedStripEnd.UpdateSpeed(rightHighAverage);
+        }
+
+        void LowMidHighVolumeBars(float[] leftChannel, float[] rightChannel)
+        {
+            float leftLowAverage = HelperMethods.Average(leftChannel, 0, LowCutoff);
+            float rightLowAverage = HelperMethods.Average(rightChannel, 0, LowCutoff);
+            float leftMidAverage = HelperMethods.Average(leftChannel, LowCutoff, MidCutoff);
+            float rightMidAverage = HelperMethods.Average(rightChannel, LowCutoff, MidCutoff);
+            float leftHighAverage = HelperMethods.Average(leftChannel, MidCutoff);
+            float rightHighAverage = HelperMethods.Average(rightChannel, MidCutoff);
+
+            // set strip sides to repeating patterns, increase pattern loop speed based upon loudness of level
+            beatDetector.UpdateBeat((leftLowAverage + rightLowAverage) / 2);
+            if (beatDetector.Beat)
+            {
+                cube.SetColor(Colors.White);
+            }
+            else
+            {
+                cube.Reset();
+                cube.bottomFrontEdge.UpdateLeft(leftLowAverage, Colors.Red);
+                cube.bottomFrontEdge.UpdateRight(rightLowAverage, Colors.Red);
+                cube.bottomRightEdge.UpdateLeft(leftLowAverage, Colors.Red);
+                cube.bottomRightEdge.UpdateRight(rightLowAverage, Colors.Red);
+                cube.bottomBackEdge.UpdateLeft(leftLowAverage, Colors.Red);
+                cube.bottomBackEdge.UpdateRight(rightLowAverage, Colors.Red);
+                cube.bottomLeftEdge.UpdateLeft(leftLowAverage, Colors.Red);
+                cube.bottomLeftEdge.UpdateRight(rightLowAverage, Colors.Red);
+                cube.frontLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+                cube.frontLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+                cube.rightLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+                cube.rightLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+                cube.backLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+                cube.backLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+                cube.leftLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+                cube.leftLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+                cube.frontTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+                cube.frontTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+                cube.rightTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+                cube.rightTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+                cube.backTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+                cube.backTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+                cube.leftTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+                cube.leftTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+            }
+            cube.Update();
         }
 
         async Task PrintToLog(string str)
@@ -804,7 +573,6 @@ namespace TheBox
                 fftData[j] = c;
             }
             Fft.FFT(fftData, Fft.Direction.Forward);
-            //Fft.Calculate(fftData);
             float[] fftResult = new float[audioGraph.SamplesPerQuantum / 2];
             for (int j = 0; j < fftResult.Length; j++)
             {
@@ -898,6 +666,40 @@ namespace TheBox
                 cube.Brightness = (byte)e.NewValue;
                 cube.Update();
             }
+        }
+
+        private void volumesButton_Click(object sender, RoutedEventArgs e)
+        {
+            currentMode = Modes.Volumes;
+            cube.SetColor(Colors.Black);
+            cube.Update();
+        }
+
+        private void speedRainbowButton_Click(object sender, RoutedEventArgs e)
+        {
+            cube.SetSpeedStripLedColors(LedColorLists.rainbowColors);
+            currentMode = Modes.SpeedRainbow;
+            cube.SetColor(Colors.Black);
+            cube.Update();
+        }
+
+        private void speedAlternatingButton_Click(object sender, RoutedEventArgs e)
+        {
+            cube.bottomFrontEdge.SetSpeedStripLedColors(LedColorLists.redTest);
+            cube.bottomRightEdge.SetSpeedStripLedColors(LedColorLists.redTest);
+            cube.bottomBackEdge.SetSpeedStripLedColors(LedColorLists.redTest);
+            cube.bottomLeftEdge.SetSpeedStripLedColors(LedColorLists.redTest);
+            cube.frontLeftEdge.SetSpeedStripLedColors(LedColorLists.greenTest);
+            cube.rightLeftEdge.SetSpeedStripLedColors(LedColorLists.greenTest);
+            cube.backLeftEdge.SetSpeedStripLedColors(LedColorLists.greenTest);
+            cube.leftLeftEdge.SetSpeedStripLedColors(LedColorLists.greenTest);
+            cube.frontTopEdge.SetSpeedStripLedColors(LedColorLists.blueTest);
+            cube.rightTopEdge.SetSpeedStripLedColors(LedColorLists.blueTest);
+            cube.backTopEdge.SetSpeedStripLedColors(LedColorLists.blueTest);
+            cube.leftTopEdge.SetSpeedStripLedColors(LedColorLists.blueTest);
+            currentMode = Modes.SpeedAlternating;
+            cube.SetColor(Colors.Black);
+            cube.Update();
         }
     }
 }

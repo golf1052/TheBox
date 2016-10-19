@@ -10,7 +10,7 @@ namespace TheBox
     public class Edge
     {
         public int[] leds;
-        private DotStarStrip strip;
+        public DotStarStrip strip;
 
         private byte brightness;
         public byte Brightness
@@ -37,6 +37,9 @@ namespace TheBox
         private AdjustableMax rightMax;
         public bool Reverse { get; set; }
 
+        public LedSpeedStrip speedStripBeginning;
+        public LedSpeedStrip speedStripEnd;
+
         public Edge(int start, int end, DotStarStrip strip)
         {
             this.strip = strip;
@@ -51,6 +54,15 @@ namespace TheBox
             ledColors = new List<Color>();
             leftMax = new AdjustableMax();
             rightMax = new AdjustableMax();
+            float speedRollover = 0.5f;
+            speedStripBeginning = new LedSpeedStrip(this, LedSpeedStrip.Sides.MiddleToBeginning, speedRollover);
+            speedStripEnd = new LedSpeedStrip(this, LedSpeedStrip.Sides.MiddleToEnd, speedRollover);
+        }
+
+        public void SetSpeedStripLedColors(List<Color> ledColors)
+        {
+            speedStripBeginning.LedColors = ledColors;
+            speedStripEnd.LedColors = ledColors;
         }
 
         public async Task DoLine()
@@ -102,6 +114,63 @@ namespace TheBox
             strip.SendPixels();
         }
 
+        float speedRollover = 500000;
+        float speed = 1;
+        float currentSpeed = 0;
+
+        public void UpdateSpeedLeft()
+        {
+            int offset = 0;
+            for (int times = 0; times < ledColors.Count; times++)
+            {
+                int j = offset;
+                for (int i = 0; i < leds.Length; i++)
+                {
+                    strip.strip[leds[i]] = ledColors[j];
+                    j++;
+                    j %= ledColors.Count - 1;
+                }
+                offset++;
+                if (offset >= ledColors.Count)
+                {
+                    offset = 0;
+                }
+                Update();
+                while (true)
+                {
+                    if (currentSpeed >= speedRollover)
+                    {
+                        currentSpeed %= speedRollover;
+                        break;
+                    }
+                    else
+                    {
+                        currentSpeed += speed;
+                    }
+                }
+            }
+        }
+
+        int leftOffset = 0;
+        int rightOffset = 0;
+
+        public void StepLeft()
+        {
+            int j = leftOffset;
+            for (int i = 5; i >= 0; i--)
+            {
+                strip.strip[leds[i]] = ledColors[j];
+                j++;
+                j %= ledColors.Count - 1;
+            }
+            leftOffset++;
+            if (leftOffset >= ledColors.Count)
+            {
+                leftOffset = 0;
+            }
+            Update();
+        }
+
         public void UpdateLeft(float value, Color color)
         {
             leftMax.Value = value;
@@ -140,7 +209,7 @@ namespace TheBox
                 }
                 else
                 {
-                    strip.strip[leds[i]] = Colors.Black;
+                    strip.strip[leds[i]] = Colors.White;
                 }
             }
         }
@@ -155,7 +224,7 @@ namespace TheBox
                 }
                 else
                 {
-                    strip.strip[leds[i]] = Colors.Black;
+                    strip.strip[leds[i]] = Colors.White;
                 }
             }
         }

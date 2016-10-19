@@ -104,6 +104,8 @@
     <Compile Include="Face.cs" />
     <Compile Include="Fft.cs" />
     <Compile Include="HelperMethods.cs" />
+    <Compile Include="LedColorLists.cs" />
+    <Compile Include="LedSpeedStrip.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>

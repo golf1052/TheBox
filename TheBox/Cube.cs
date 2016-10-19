@@ -135,6 +135,21 @@ namespace TheBox
             brightness = 255;
         }
 
+        public void SetSpeedStripLedColors(List<Color> ledColors)
+        {
+            bottomFrontEdge.SetSpeedStripLedColors(ledColors);
+            bottomRightEdge.SetSpeedStripLedColors(ledColors);
+            bottomBackEdge.SetSpeedStripLedColors(ledColors);
+            bottomLeftEdge.SetSpeedStripLedColors(ledColors);
+            frontLeftEdge.SetSpeedStripLedColors(ledColors);
+            frontTopEdge.SetSpeedStripLedColors(ledColors);
+            rightLeftEdge.SetSpeedStripLedColors(ledColors);
+            rightTopEdge.SetSpeedStripLedColors(ledColors);
+            backLeftEdge.SetSpeedStripLedColors(ledColors);
+            backTopEdge.SetSpeedStripLedColors(ledColors);
+            leftLeftEdge.SetSpeedStripLedColors(ledColors);
+            leftTopEdge.SetSpeedStripLedColors(ledColors);
+        }
 
         public delegate Color ColorFunction(double x, double y, double z);
 

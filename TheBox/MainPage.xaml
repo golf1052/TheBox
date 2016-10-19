@@ -32,5 +32,8 @@
         <Slider x:Name="brightnessSlider" Margin="50,0" VerticalAlignment="Center" Maximum="255" Value="255" ValueChanged="brightnessSlider_ValueChanged"/>
         <ListView x:Name="listView" HorizontalAlignment="Left" Height="393" Margin="1123,47,0,0" VerticalAlignment="Top" Width="620"/>
         <TextBlock x:Name="debugBlock" HorizontalAlignment="Left" Margin="1204,262,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" FontSize="72"/>
+        <Button x:Name="volumesButton" Content="Volumes" HorizontalAlignment="Left" Margin="48,923,0,0" VerticalAlignment="Top" Height="117" Width="304" Click="volumesButton_Click"/>
+        <Button x:Name="speedRainbowButton" Content="Rainbow" HorizontalAlignment="Left" Margin="371,923,0,0" VerticalAlignment="Top" Height="117" Width="277" Click="speedRainbowButton_Click"/>
+        <Button x:Name="speedAlternatingButton" Content="Alternating" HorizontalAlignment="Left" Margin="663,923,0,0" VerticalAlignment="Top" Height="117" Width="335" Click="speedAlternatingButton_Click"/>
     </Grid>
 </Page>
