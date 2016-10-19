@@ -8,32 +8,45 @@
     mc:Ignorable="d">
 
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <Grid HorizontalAlignment="Left" VerticalAlignment="Top" Margin="299,234,0,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="1">
             <Grid.RowDefinitions>
                 <RowDefinition/>
                 <RowDefinition/>
                 <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
             </Grid.RowDefinitions>
-            <TextBlock x:Name="lowBlock" HorizontalAlignment="Left" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" FontSize="72"/>
-            <TextBlock x:Name="midBlock" HorizontalAlignment="Left" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" FontSize="72" Grid.Row="1"/>
-            <TextBlock x:Name="highBlock" HorizontalAlignment="Left" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" FontSize="72" Grid.Row="2"/>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Button x:Name="volumesButton" Content="Volumes" HorizontalAlignment="Stretch" Margin="10" VerticalAlignment="Stretch" Click="volumesButton_Click"/>
+            <Button x:Name="speedRainbowButton" Content="Rainbow" HorizontalAlignment="Stretch" Margin="10" VerticalAlignment="Stretch" Click="speedRainbowButton_Click" Grid.Column="1"/>
+            <Button x:Name="speedAlternatingButton" Content="Alternating" HorizontalAlignment="Stretch" Margin="10" VerticalAlignment="Stretch" Click="speedAlternatingButton_Click" Grid.Column="2"/>
+            <Button x:Name="speedSingleButton" Content="Single" HorizontalAlignment="Stretch" Margin="10" Grid.Row="1" VerticalAlignment="Stretch" Click="speedSingleButton_Click"/>
+            <Button x:Name="speedTriRainbowButton" Content="TriRainbow" Grid.Column="1" HorizontalAlignment="Stretch" Margin="10" Grid.Row="1" VerticalAlignment="Stretch" Click="speedTriRainbowButton_Click"/>
+            <Button x:Name="resetButton" Content="Reset" HorizontalAlignment="Stretch" Margin="10" Grid.Row="4" VerticalAlignment="Stretch" Click="resetButton_Click"/>
         </Grid>
-        <Grid x:Name="rectangleGrid">
-        </Grid>
-        <TextBlock x:Name="currentAverageBlock" VerticalAlignment="Bottom" Foreground="Black"></TextBlock>
-        <TextBlock x:Name="lastBeatBlock" VerticalAlignment="Bottom" Foreground="Black" Margin="0,0,0,20"></TextBlock>
-        <TextBlock x:Name="timeBetweenBeatsBlock" VerticalAlignment="Bottom" Foreground="Black" Margin="0,0,0,40"></TextBlock>
-        <TextBlock x:Name="beatValueBlock" VerticalAlignment="Bottom" Foreground="Black" Margin="0,0,0,60"></TextBlock>
-        <Rectangle x:Name="leftPositiveRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,50,0" Fill="CornflowerBlue"></Rectangle>
-        <Rectangle x:Name="leftNegativeRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,100,50,0" Fill="CornflowerBlue"></Rectangle>
-        <Rectangle x:Name="rightPositiveRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="50,0,0,0" Fill="CornflowerBlue"></Rectangle>
-        <Rectangle x:Name="rightNegativeRect" Width="25" Height="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="50,100,0,0" Fill="CornflowerBlue"></Rectangle>
         <MediaElement x:Name="mediaElement"></MediaElement>
-        <Slider x:Name="brightnessSlider" Margin="50,0" VerticalAlignment="Center" Maximum="255" Value="255" ValueChanged="brightnessSlider_ValueChanged"/>
-        <ListView x:Name="listView" HorizontalAlignment="Left" Height="393" Margin="1123,47,0,0" VerticalAlignment="Top" Width="620"/>
-        <TextBlock x:Name="debugBlock" HorizontalAlignment="Left" Margin="1204,262,0,0" TextWrapping="Wrap" Text="0" VerticalAlignment="Top" FontSize="72"/>
-        <Button x:Name="volumesButton" Content="Volumes" HorizontalAlignment="Left" Margin="48,923,0,0" VerticalAlignment="Top" Height="117" Width="304" Click="volumesButton_Click"/>
-        <Button x:Name="speedRainbowButton" Content="Rainbow" HorizontalAlignment="Left" Margin="371,923,0,0" VerticalAlignment="Top" Height="117" Width="277" Click="speedRainbowButton_Click"/>
-        <Button x:Name="speedAlternatingButton" Content="Alternating" HorizontalAlignment="Left" Margin="663,923,0,0" VerticalAlignment="Top" Height="117" Width="335" Click="speedAlternatingButton_Click"/>
+        <Grid Margin="0">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Slider x:Name="brightnessSlider" Margin="0,50" Maximum="255" Value="127" ValueChanged="brightnessSlider_ValueChanged" Orientation="Vertical" HorizontalAlignment="Center"/>
+            <Grid Margin="0" Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="autoCycleCheckbox" Margin="10" HorizontalAlignment="Center" Content="Auto Cycle" IsChecked="True" Click="autoCycleCheckbox_Click"/>
+                <CheckBox x:Name="reverseCheckbox" Content="Reverse" Grid.Column="1" HorizontalAlignment="Center" Margin="10" VerticalAlignment="Center" Click="reverseCheckbox_Click"/>
+            </Grid>
+        </Grid>
     </Grid>
 </Page>

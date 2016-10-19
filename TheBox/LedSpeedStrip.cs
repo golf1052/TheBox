@@ -36,11 +36,14 @@ namespace TheBox
         private float speedRollover = 500000;
         private float currentSpeed = 0;
 
+        public bool Reverse { get; set; }
+
         public LedSpeedStrip(Edge edge, Sides side)
         {
             ledColors = new List<Color>();
             this.edge = edge;
             this.side = side;
+            Reverse = false;
         }
 
         public LedSpeedStrip(Edge edge, Sides side, float speedRollover) : this(edge, side)
@@ -53,7 +56,14 @@ namespace TheBox
             if (currentSpeed >= speedRollover)
             {
                 currentSpeed %= speedRollover;
-                Step();
+                if (!Reverse)
+                {
+                    Step();
+                }
+                else
+                {
+                    StepReverse();
+                }
             }
             else
             {
@@ -79,14 +89,44 @@ namespace TheBox
             edge.Update();
         }
 
+        private void StepReverse()
+        {
+            if (side == Sides.MiddleToBeginning)
+            {
+                DoMiddleToBeginning();
+            }
+            else if (side == Sides.MiddleToEnd)
+            {
+                DoMiddleToEnd();
+            }
+            offset--;
+            if (offset < 0)
+            {
+                offset = ledColors.Count - 1;
+            }
+            edge.Update();
+        }
+
         private void DoMiddleToBeginning()
         {
             int j = offset;
             for (int i = 5; i >= 0; i--)
             {
                 edge.strip.strip[edge.leds[i]] = ledColors[j];
+                //if (!Reverse)
+                //{
+                //    j++;
+                //}
+                //else
+                //{
+                //    j--;
+                //    if (j < 0)
+                //    {
+                //        j = ledColors.Count - 1;
+                //    }
+                //}
                 j++;
-                j %= ledColors.Count - 1;
+                j %= ledColors.Count;
             }
         }
 
@@ -96,8 +136,20 @@ namespace TheBox
             for (int i = 7; i < 13; i++)
             {
                 edge.strip.strip[edge.leds[i]] = ledColors[j];
+                //if (!Reverse)
+                //{
+                //    j++;
+                //}
+                //else
+                //{
+                //    j--;
+                //    if (j < 0)
+                //    {
+                //        j = ledColors.Count - 1;
+                //    }
+                //}
                 j++;
-                j %= ledColors.Count - 1;
+                j %= ledColors.Count;
             }
         }
     }

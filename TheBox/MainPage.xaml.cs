@@ -46,7 +46,9 @@ namespace TheBox
         {
             Volumes,
             SpeedRainbow,
-            SpeedAlternating
+            SpeedAlternating,
+            SpeedSingle,
+            SpeedTriRainbow
         }
         Modes currentMode;
 
@@ -55,24 +57,56 @@ namespace TheBox
 
         AudioGraph audioGraph;
         AudioFrameOutputNode frameOutputNode;
-        static bool doneProcessing = true;
 
         DeviceInformation audioInput;
         DeviceInformation audioOutput;
         DeviceInformation raspiAudioOutput;
 
-        DateTime lastBeat = DateTime.MinValue;
-        TimeSpan timeBetweenBeats = TimeSpan.Zero;
-        float beatValue = 0;
-        BeatDetector beatDetector;
-
         Cube cube;
-
-        List<Rectangle> rectangles;
-        List<AdjustableMax> maxes;
 
         const int LowCutoff = 15;
         const int MidCutoff = 100;
+
+        private int brightness;
+        public int Brightness
+        {
+            get
+            {
+                return brightness;
+            }
+            set
+            {
+                brightness = value;
+                if (cube != null)
+                {
+                    cube.Brightness = (byte)brightness;
+                    cube.Update();
+                }
+            }
+        }
+
+        Random random;
+
+        public bool AutoCycle { get; set; }
+
+        private DateTime lastChange;
+        private TimeSpan changeTime;
+        private int previousPatternValue = 0;
+
+        private DateTime quietTime;
+
+        private bool reverse;
+        public bool Reverse
+        {
+            get
+            {
+                return reverse;
+            }
+            set
+            {
+                reverse = value;
+            }
+        }
 
         public MainPage()
         {
@@ -80,34 +114,12 @@ namespace TheBox
             leftStrip = new DotStarStrip(78, "SPI0");
             rightStrip = new DotStarStrip(78, "SPI1");
             cube = new Cube(leftStrip, rightStrip);
-            rectangles = new List<Rectangle>();
-            maxes = new List<AdjustableMax>();
-            beatDetector = new BeatDetector(50);
-            for (int i = 0; i < 220; i++)
-            {
-                Rectangle rect = new Rectangle();
-                if (i < LowCutoff)
-                {
-                    rect.Fill = new SolidColorBrush(Colors.Red);
-                }
-                else if (i < MidCutoff)
-                {
-                    rect.Fill = new SolidColorBrush(Colors.Green);
-                }
-                else
-                {
-                    rect.Fill = new SolidColorBrush(Colors.CornflowerBlue);
-                }
-                rect.HorizontalAlignment = HorizontalAlignment.Left;
-                rect.VerticalAlignment = VerticalAlignment.Bottom;
-                rect.Width = 8;
-                rect.Height = 0;
-                rect.Margin = new Thickness(i * 8, 0, 0, 0);
-                rectangleGrid.Children.Add(rect);
-                rectangles.Add(rect);
-                maxes.Add(new AdjustableMax());
-            }
+            AutoCycle = true;
+            Reverse = false;
+            random = new Random();
             currentMode = Modes.SpeedRainbow;
+            lastChange = DateTime.UtcNow;
+            changeTime = TimeSpan.FromSeconds(15);
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -179,7 +191,6 @@ namespace TheBox
             inputNode.AddOutgoingConnection(outputNode);
             cube.SetSpeedStripLedColors(LedColorLists.rainbowColors);
             audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
-            // z = sin(sqrt(x2+y2)) from 0 to 2p1
             audioGraph.UnrecoverableErrorOccurred += AudioGraph_UnrecoverableErrorOccurred;
             audioGraph.Start();
             outputNode.Start();
@@ -252,7 +263,7 @@ namespace TheBox
                             (byte)(((zc * 255.0) + phase) % 255.0));
                         return c;
                     });
-                    cube.SetLedColors();
+                    //cube.SetLedColors();
                     cube.Update();
                     await Task.Delay(TimeSpan.FromMilliseconds(16));
                 }
@@ -398,16 +409,8 @@ namespace TheBox
         private void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
         {
             AudioFrame audioFrame = frameOutputNode.GetFrame();
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
             List<float[]> amplitudeData = ProcessFrameOutput(audioFrame);
             List<float[]> channelData = GetFftData(ConvertTo512(amplitudeData));
-            stopwatch.Stop();
-            if (channelData.Count == 0)
-            {
-                doneProcessing = true;
-                return;
-            }
             for (int i = 0; i < channelData.Count / 2; i++)
             {
                 float[] leftChannel = channelData[i];
@@ -419,6 +422,65 @@ namespace TheBox
                 else
                 {
                     LowMidHighSpeedBars(leftChannel, rightChannel);
+                }
+            }
+            if (AutoCycle)
+            {
+                if (DateTime.UtcNow - lastChange >= changeTime)
+                {
+                    int randomPattern = random.Next(5);
+                    while (randomPattern == previousPatternValue)
+                    {
+                        randomPattern = random.Next(5);
+                    }
+                    previousPatternValue = randomPattern;
+                    lastChange = DateTime.UtcNow;
+                    if (randomPattern == 0)
+                    {
+                        volumesButton_Click(null, null);
+                    }
+                    else if (randomPattern == 1)
+                    {
+                        speedRainbowButton_Click(null, null);
+                    }
+                    else if (randomPattern == 2)
+                    {
+                        speedAlternatingButton_Click(null, null);
+                    }
+                    else if (randomPattern == 3)
+                    {
+                        speedSingleButton_Click(null, null);
+                    }
+                    else if (randomPattern == 4)
+                    {
+                        speedTriRainbowButton_Click(null, null);
+                    }
+
+                    int randomReverse = random.Next(2);
+                    if (randomReverse == 0)
+                    {
+                        if (Reverse)
+                        {
+                            Reverse = false;
+                            cube.ReverseSpeedStrip = Reverse;
+                            DoUIThingSync(() =>
+                            {
+                                reverseCheckbox.IsChecked = Reverse;
+                            });
+                        }
+                    }
+                    else if (randomReverse == 1)
+                    {
+                        if (!Reverse)
+                        {
+                            Reverse = true;
+                            cube.ReverseSpeedStrip = Reverse;
+                            DoUIThingSync(() =>
+                            {
+                                reverseCheckbox.IsChecked = Reverse;
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -466,59 +528,31 @@ namespace TheBox
             float leftHighAverage = HelperMethods.Average(leftChannel, MidCutoff);
             float rightHighAverage = HelperMethods.Average(rightChannel, MidCutoff);
 
-            // set strip sides to repeating patterns, increase pattern loop speed based upon loudness of level
-            beatDetector.UpdateBeat((leftLowAverage + rightLowAverage) / 2);
-            if (beatDetector.Beat)
-            {
-                cube.SetColor(Colors.White);
-            }
-            else
-            {
-                cube.Reset();
-                cube.bottomFrontEdge.UpdateLeft(leftLowAverage, Colors.Red);
-                cube.bottomFrontEdge.UpdateRight(rightLowAverage, Colors.Red);
-                cube.bottomRightEdge.UpdateLeft(leftLowAverage, Colors.Red);
-                cube.bottomRightEdge.UpdateRight(rightLowAverage, Colors.Red);
-                cube.bottomBackEdge.UpdateLeft(leftLowAverage, Colors.Red);
-                cube.bottomBackEdge.UpdateRight(rightLowAverage, Colors.Red);
-                cube.bottomLeftEdge.UpdateLeft(leftLowAverage, Colors.Red);
-                cube.bottomLeftEdge.UpdateRight(rightLowAverage, Colors.Red);
-                cube.frontLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-                cube.frontLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-                cube.rightLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-                cube.rightLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-                cube.backLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-                cube.backLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-                cube.leftLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-                cube.leftLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-                cube.frontTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-                cube.frontTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-                cube.rightTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-                cube.rightTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-                cube.backTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-                cube.backTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-                cube.leftTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-                cube.leftTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-            }
+            cube.bottomFrontEdge.UpdateLeft(leftLowAverage, Colors.Red);
+            cube.bottomFrontEdge.UpdateRight(rightLowAverage, Colors.Red);
+            cube.bottomRightEdge.UpdateLeft(leftLowAverage, Colors.Red);
+            cube.bottomRightEdge.UpdateRight(rightLowAverage, Colors.Red);
+            cube.bottomBackEdge.UpdateLeft(leftLowAverage, Colors.Red);
+            cube.bottomBackEdge.UpdateRight(rightLowAverage, Colors.Red);
+            cube.bottomLeftEdge.UpdateLeft(leftLowAverage, Colors.Red);
+            cube.bottomLeftEdge.UpdateRight(rightLowAverage, Colors.Red);
+            cube.frontLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+            cube.frontLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+            cube.rightLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+            cube.rightLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+            cube.backLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+            cube.backLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+            cube.leftLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
+            cube.leftLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
+            cube.frontTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+            cube.frontTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+            cube.rightTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+            cube.rightTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+            cube.backTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+            cube.backTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
+            cube.leftTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
+            cube.leftTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
             cube.Update();
-        }
-
-        async Task PrintToLog(string str)
-        {
-            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-                    () =>
-                    {
-                        listView.Items.Add(str);
-                        listView.ScrollIntoView(listView.Items.Last());
-                    });
-        }
-
-        async Task DoUIThing(Action func)
-        {
-            await Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
-            {
-                func.Invoke();
-            });
         }
 
         List<float[]> ConvertTo512(List<float[]> channelData)
@@ -613,6 +647,22 @@ namespace TheBox
             return Color.FromArgb(255, r, g, b);
         }
 
+        async Task DoUIThing(Action func)
+        {
+            await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+            {
+                func.Invoke();
+            });
+        }
+
+        void DoUIThingSync(Action func)
+        {
+            Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+            {
+                func.Invoke();
+            }).AsTask().Wait();
+        }
+
         unsafe private List<float[]> ProcessFrameOutput(AudioFrame frame)
         {
             using (AudioBuffer audioBuffer = frame.LockBuffer(AudioBufferAccessMode.Write))
@@ -670,9 +720,12 @@ namespace TheBox
 
         private void volumesButton_Click(object sender, RoutedEventArgs e)
         {
+            ResetLevels();
             currentMode = Modes.Volumes;
             cube.SetColor(Colors.Black);
             cube.Update();
+            Brightness = 30;
+            UpdateSliderBrightness();
         }
 
         private void speedRainbowButton_Click(object sender, RoutedEventArgs e)
@@ -681,25 +734,99 @@ namespace TheBox
             currentMode = Modes.SpeedRainbow;
             cube.SetColor(Colors.Black);
             cube.Update();
+            Brightness = 127;
+            UpdateSliderBrightness();
         }
 
         private void speedAlternatingButton_Click(object sender, RoutedEventArgs e)
         {
-            cube.bottomFrontEdge.SetSpeedStripLedColors(LedColorLists.redTest);
-            cube.bottomRightEdge.SetSpeedStripLedColors(LedColorLists.redTest);
-            cube.bottomBackEdge.SetSpeedStripLedColors(LedColorLists.redTest);
-            cube.bottomLeftEdge.SetSpeedStripLedColors(LedColorLists.redTest);
-            cube.frontLeftEdge.SetSpeedStripLedColors(LedColorLists.greenTest);
-            cube.rightLeftEdge.SetSpeedStripLedColors(LedColorLists.greenTest);
-            cube.backLeftEdge.SetSpeedStripLedColors(LedColorLists.greenTest);
-            cube.leftLeftEdge.SetSpeedStripLedColors(LedColorLists.greenTest);
-            cube.frontTopEdge.SetSpeedStripLedColors(LedColorLists.blueTest);
-            cube.rightTopEdge.SetSpeedStripLedColors(LedColorLists.blueTest);
-            cube.backTopEdge.SetSpeedStripLedColors(LedColorLists.blueTest);
-            cube.leftTopEdge.SetSpeedStripLedColors(LedColorLists.blueTest);
+            cube.bottomZone.SetSpeedStripLedColors(LedColorLists.redAlternating);
+            cube.midZone.SetSpeedStripLedColors(LedColorLists.greenAlternating);
+            cube.topZone.SetSpeedStripLedColors(LedColorLists.blueAlternating);
             currentMode = Modes.SpeedAlternating;
             cube.SetColor(Colors.Black);
             cube.Update();
+            Brightness = 127;
+            UpdateSliderBrightness();
+        }
+
+        private void speedSingleButton_Click(object sender, RoutedEventArgs e)
+        {
+            cube.bottomZone.SetSpeedStripLedColors(LedColorLists.redSingle);
+            cube.midZone.SetSpeedStripLedColors(LedColorLists.greenSingle);
+            cube.topZone.SetSpeedStripLedColors(LedColorLists.blueSingle);
+            currentMode = Modes.SpeedSingle;
+            cube.SetColor(Colors.Black);
+            cube.Update();
+            Brightness = 255;
+            UpdateSliderBrightness();
+        }
+
+        private void speedTriRainbowButton_Click(object sender, RoutedEventArgs e)
+        {
+            cube.bottomZone.SetSpeedStripLedColors(LedColorLists.redRainbow);
+            cube.midZone.SetSpeedStripLedColors(LedColorLists.greenRainbow);
+            cube.topZone.SetSpeedStripLedColors(LedColorLists.blueRainbow);
+            currentMode = Modes.SpeedTriRainbow;
+            cube.SetColor(Colors.Black);
+            cube.Update();
+            Brightness = 127;
+            UpdateSliderBrightness();
+        }
+
+        void UpdateSliderBrightness()
+        {
+            DoUIThingSync(() =>
+            {
+                brightnessSlider.Value = Brightness;
+            });
+        }
+
+        private void resetButton_Click(object sender, RoutedEventArgs e)
+        {
+            ResetLevels();
+        }
+
+        void ResetLevels()
+        {
+            cube.ResetMaxes();
+        }
+
+        private void autoCycleCheckbox_Click(object sender, RoutedEventArgs e)
+        {
+            if (autoCycleCheckbox.IsChecked.HasValue && autoCycleCheckbox.IsChecked.Value)
+            {
+                AutoCycle = true;
+            }
+            else if (autoCycleCheckbox.IsChecked.HasValue && !autoCycleCheckbox.IsChecked.Value)
+            {
+                AutoCycle = false;
+            }
+            else
+            {
+                AutoCycle = true;
+            }
+        }
+
+        private void reverseCheckbox_Click(object sender, RoutedEventArgs e)
+        {
+            if (reverseCheckbox.IsChecked.HasValue && reverseCheckbox.IsChecked.Value)
+            {
+                Reverse = true;
+                if (cube != null)
+                {
+                    cube.ReverseSpeedStrip = Reverse;
+                }
+                
+            }
+            else
+            {
+                Reverse = false;
+                if (cube != null)
+                {
+                    cube.ReverseSpeedStrip = Reverse;
+                }
+            }
         }
     }
 }

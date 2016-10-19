@@ -7,12 +7,12 @@ using Windows.UI;
 
 namespace TheBox
 {
-    public struct Face
+    public class Face
     {
-        private Edge top;
-        private Edge right;
-        private Edge bottom;
-        private Edge left;
+        protected Edge top;
+        protected Edge right;
+        protected Edge bottom;
+        protected Edge left;
 
         private byte brightness;
         public byte Brightness
@@ -37,7 +37,7 @@ namespace TheBox
             this.right = right;
             this.bottom = bottom;
             this.left = left;
-            brightness = 255;
+            brightness = 127;
         }
 
         public void SetColor(Color color)
@@ -46,14 +46,6 @@ namespace TheBox
             right.SetColor(color);
             bottom.SetColor(color);
             left.SetColor(color);
-        }
-
-        public void SetLedColors()
-        {
-            top.SetLedColors();
-            right.SetLedColors();
-            bottom.SetLedColors();
-            left.SetLedColors();
         }
 
         public void Reset()

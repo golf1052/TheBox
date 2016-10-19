@@ -22,6 +22,18 @@ namespace TheBox
             set
             {
                 brightness = value;
+                for (int i = 0; i < speedStripBeginning.LedColors.Count; i++)
+                {
+                    Color c = speedStripBeginning.LedColors[i];
+                    c.A = brightness;
+                    speedStripBeginning.LedColors[i] = c;
+                }
+                for (int i = 0; i < speedStripEnd.LedColors.Count; i++)
+                {
+                    Color c = speedStripEnd.LedColors[i];
+                    c.A = brightness;
+                    speedStripEnd.LedColors[i] = c;
+                }
                 foreach (int i in leds)
                 {
                     Color c = strip.strip[i];
@@ -31,14 +43,26 @@ namespace TheBox
             }
         }
 
-        public List<Color> ledColors;
-
         private AdjustableMax leftMax;
         private AdjustableMax rightMax;
         public bool Reverse { get; set; }
 
         public LedSpeedStrip speedStripBeginning;
         public LedSpeedStrip speedStripEnd;
+        private bool reverseSpeedStrip;
+        public bool ReverseSpeedStrip
+        {
+            get
+            {
+                return reverseSpeedStrip;
+            }
+            set
+            {
+                reverseSpeedStrip = value;
+                speedStripBeginning.Reverse = reverseSpeedStrip;
+                speedStripEnd.Reverse = reverseSpeedStrip;
+            }
+        }
 
         public Edge(int start, int end, DotStarStrip strip)
         {
@@ -50,8 +74,7 @@ namespace TheBox
                 leds[j] = i;
                 j++;
             }
-            brightness = 255;
-            ledColors = new List<Color>();
+            brightness = 127;
             leftMax = new AdjustableMax();
             rightMax = new AdjustableMax();
             float speedRollover = 0.5f;
@@ -61,30 +84,14 @@ namespace TheBox
 
         public void SetSpeedStripLedColors(List<Color> ledColors)
         {
+            for (int i = 0; i < ledColors.Count; i++)
+            {
+                Color c = ledColors[i];
+                c.A = Brightness;
+                ledColors[i] = c;
+            }
             speedStripBeginning.LedColors = ledColors;
             speedStripEnd.LedColors = ledColors;
-        }
-
-        public async Task DoLine()
-        {
-            int offset = 0;
-            for (int times = 0; times < ledColors.Count; times++)
-            {
-                int j = offset;
-                for (int i = 0; i < leds.Length; i++)
-                {
-                    strip.strip[leds[i]] = ledColors[j];
-                    j++;
-                    j %= ledColors.Count - 1;
-                }
-                offset++;
-                if (offset >= ledColors.Count)
-                {
-                    offset = 0;
-                }
-                Update();
-                await Task.Delay(TimeSpan.FromMilliseconds(100));
-            }
         }
 
         public void SetColor(Color color)
@@ -96,17 +103,15 @@ namespace TheBox
             }
         }
 
-        public void SetLedColors()
-        {
-            for (int i = 0; i < leds.Length; i++)
-            {
-                strip.strip[leds[i]] = ledColors[i];
-            }
-        }
-
         public void Reset()
         {
             SetColor(Colors.Black);
+        }
+
+        public void ResetMaxes()
+        {
+            leftMax.Reset();
+            rightMax.Reset();
         }
 
         public void Update()
@@ -114,65 +119,9 @@ namespace TheBox
             strip.SendPixels();
         }
 
-        float speedRollover = 500000;
-        float speed = 1;
-        float currentSpeed = 0;
-
-        public void UpdateSpeedLeft()
-        {
-            int offset = 0;
-            for (int times = 0; times < ledColors.Count; times++)
-            {
-                int j = offset;
-                for (int i = 0; i < leds.Length; i++)
-                {
-                    strip.strip[leds[i]] = ledColors[j];
-                    j++;
-                    j %= ledColors.Count - 1;
-                }
-                offset++;
-                if (offset >= ledColors.Count)
-                {
-                    offset = 0;
-                }
-                Update();
-                while (true)
-                {
-                    if (currentSpeed >= speedRollover)
-                    {
-                        currentSpeed %= speedRollover;
-                        break;
-                    }
-                    else
-                    {
-                        currentSpeed += speed;
-                    }
-                }
-            }
-        }
-
-        int leftOffset = 0;
-        int rightOffset = 0;
-
-        public void StepLeft()
-        {
-            int j = leftOffset;
-            for (int i = 5; i >= 0; i--)
-            {
-                strip.strip[leds[i]] = ledColors[j];
-                j++;
-                j %= ledColors.Count - 1;
-            }
-            leftOffset++;
-            if (leftOffset >= ledColors.Count)
-            {
-                leftOffset = 0;
-            }
-            Update();
-        }
-
         public void UpdateLeft(float value, Color color)
         {
+            color.A = Brightness;
             leftMax.Value = value;
             float val = leftMax.Value;
             if (!Reverse)
@@ -187,6 +136,7 @@ namespace TheBox
 
         public void UpdateRight(float value, Color color)
         {
+            color.A = Brightness;
             rightMax.Value = value;
             float val = rightMax.Value;
             if (!Reverse)
@@ -209,7 +159,9 @@ namespace TheBox
                 }
                 else
                 {
-                    strip.strip[leds[i]] = Colors.White;
+                    Color white = Colors.Black;
+                    white.A = Brightness;
+                    strip.strip[leds[i]] = white;
                 }
             }
         }
@@ -224,7 +176,9 @@ namespace TheBox
                 }
                 else
                 {
-                    strip.strip[leds[i]] = Colors.White;
+                    Color white = Colors.Black;
+                    white.A = Brightness;
+                    strip.strip[leds[i]] = white;
                 }
             }
         }

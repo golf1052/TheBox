@@ -43,6 +43,14 @@ namespace TheBox
         public Face left;
         public Face top;
 
+        public Dictionary<Edge, Tuple<Tuple<int, int, int>, Tuple<int, int, int>>> edgeCoordinates = new Dictionary<Edge, Tuple<Tuple<int, int, int>, Tuple<int, int, int>>>();
+
+        public Zone bottomZone;
+        public Zone midZone;
+        public Zone topZone;
+
+        public bool UseFaces { get; set; }
+
         private byte brightness;
         public byte Brightness
         {
@@ -53,25 +61,46 @@ namespace TheBox
             set
             {
                 brightness = value;
-                bottom.Brightness = value;
-                front.Brightness = value;
-                right.Brightness = value;
-                back.Brightness = value;
-                left.Brightness = value;
-                top.Brightness = value;
+                if (UseFaces)
+                {
+                    bottom.Brightness = value;
+                    front.Brightness = value;
+                    right.Brightness = value;
+                    back.Brightness = value;
+                    left.Brightness = value;
+                    top.Brightness = value;
+                }
+                else
+                {
+                    bottomZone.Brightness = value;
+                    midZone.Brightness = value;
+                    topZone.Brightness = value;
+                }
             }
         }
 
-        public Dictionary<Edge, Tuple<Tuple<int, int, int>, Tuple<int, int, int>>> edgeCoordinates = new Dictionary<Edge, Tuple<Tuple<int, int, int>, Tuple<int, int, int>>>();
-
-
+        private bool reverseSpeedStrip;
+        public bool ReverseSpeedStrip
+        {
+            get
+            {
+                return reverseSpeedStrip;
+            }
+            set
+            {
+                reverseSpeedStrip = value;
+                bottomZone.ReverseSpeedStrip = reverseSpeedStrip;
+                midZone.ReverseSpeedStrip = reverseSpeedStrip;
+                topZone.ReverseSpeedStrip = reverseSpeedStrip;
+            }
+        }
 
         public Cube(DotStarStrip leftStrip, DotStarStrip rightStrip)
         {
             this.leftStrip = leftStrip;
             this.rightStrip = rightStrip;
 
-
+            UseFaces = false;
 
             bottomFrontEdge = new Edge(0, 13, rightStrip);
             var BOTTOM_FRONT_EDGE_COORDS = new Tuple<Tuple<int, int, int>, Tuple<int, int, int>>(new Tuple<int, int, int>(1, 14, 0), new Tuple<int, int, int>(13, 14, 0));
@@ -81,16 +110,12 @@ namespace TheBox
             var BOTTOM_BACK_EDGE_COORDS = new Tuple<Tuple<int, int, int>, Tuple<int, int, int>>(new Tuple<int, int, int>(13, 0, 0), new Tuple<int, int, int>(1, 0, 0));
             bottomLeftEdge = new Edge(13, 26, leftStrip);
             var BOTTOM_LEFT_EDGE_COORDS= new Tuple<Tuple<int, int, int>, Tuple<int, int, int>>(new Tuple<int, int, int>(0, 1, 0), new Tuple<int, int, int>(0, 13, 0));
-            //
 
             frontLeftEdge = new Edge(26, 39, leftStrip);
             var FRONT_LEFT_EDGE_COORDS= new Tuple<Tuple<int, int, int>, Tuple<int, int, int>>(new Tuple<int, int, int>(14, 14, 1), new Tuple<int, int, int>(14, 14, 13));
 
             frontTopEdge = new Edge(39, 52, leftStrip);
             var FRONT_TOP_EDGE_COORDS= new Tuple<Tuple<int, int, int>, Tuple<int, int, int>>(new Tuple<int, int, int>(13, 14, 14), new Tuple<int, int, int>(1, 14, 14));
-            //
-
-
 
             rightLeftEdge = new Edge(65, 78, rightStrip);
             var RIGHT_LEFT_EDGE_COORDS= new Tuple<Tuple<int, int, int>, Tuple<int, int, int>>(new Tuple<int, int, int>(14, 14, 13), new Tuple<int, int, int>(14, 14, 1));
@@ -110,7 +135,6 @@ namespace TheBox
             leftTopEdge = new Edge(52, 65, rightStrip);
             var LEFT_TOP_EDGE_COORDS= new Tuple<Tuple<int, int, int>, Tuple<int, int, int>>(new Tuple<int, int, int>(0, 1, 14), new Tuple<int, int, int>(0, 13, 14));
 
-
             edgeCoordinates.Add(bottomFrontEdge, BOTTOM_FRONT_EDGE_COORDS);
             edgeCoordinates.Add(bottomRightEdge, BOTTOM_RIGHT_EDGE_COORDS);
             edgeCoordinates.Add(bottomBackEdge, BOTTOM_BACK_EDGE_COORDS);
@@ -124,7 +148,6 @@ namespace TheBox
             edgeCoordinates.Add(leftLeftEdge, LEFT_LEFT_EDGE_COORDS);
             edgeCoordinates.Add(leftTopEdge, LEFT_TOP_EDGE_COORDS);
 
-
             bottom = new Face(bottomFrontEdge, bottomRightEdge, bottomBackEdge, bottomLeftEdge);
             front = new Face(frontTopEdge, rightLeftEdge, bottomFrontEdge, frontLeftEdge);
             right = new Face(rightTopEdge, backLeftEdge, bottomRightEdge, rightLeftEdge);
@@ -132,23 +155,18 @@ namespace TheBox
             left = new Face(leftTopEdge, frontLeftEdge, bottomLeftEdge, leftLeftEdge);
             top = new Face(frontTopEdge, rightTopEdge, backTopEdge, leftTopEdge);
 
-            brightness = 255;
+            bottomZone = new Zone(bottomFrontEdge, bottomRightEdge, bottomBackEdge, bottomLeftEdge);
+            midZone = new Zone(frontLeftEdge, rightLeftEdge, backLeftEdge, leftLeftEdge);
+            topZone = new Zone(frontTopEdge, rightTopEdge, backTopEdge, leftTopEdge);
+
+            brightness = 127;
         }
 
         public void SetSpeedStripLedColors(List<Color> ledColors)
         {
-            bottomFrontEdge.SetSpeedStripLedColors(ledColors);
-            bottomRightEdge.SetSpeedStripLedColors(ledColors);
-            bottomBackEdge.SetSpeedStripLedColors(ledColors);
-            bottomLeftEdge.SetSpeedStripLedColors(ledColors);
-            frontLeftEdge.SetSpeedStripLedColors(ledColors);
-            frontTopEdge.SetSpeedStripLedColors(ledColors);
-            rightLeftEdge.SetSpeedStripLedColors(ledColors);
-            rightTopEdge.SetSpeedStripLedColors(ledColors);
-            backLeftEdge.SetSpeedStripLedColors(ledColors);
-            backTopEdge.SetSpeedStripLedColors(ledColors);
-            leftLeftEdge.SetSpeedStripLedColors(ledColors);
-            leftTopEdge.SetSpeedStripLedColors(ledColors);
+            bottomZone.SetSpeedStripLedColors(ledColors);
+            midZone.SetSpeedStripLedColors(ledColors);
+            topZone.SetSpeedStripLedColors(ledColors);
         }
 
         public delegate Color ColorFunction(double x, double y, double z);
@@ -212,21 +230,20 @@ namespace TheBox
 
                 for (var i = i1; i <= i2; i++)
                 {
-
                     Color color;
                     if (ix)
                     {
                         color = colorFunction.Invoke(i, y1, z1);
-                    } else if (iy)
+                    }
+                    else if (iy)
                     {
                         color = colorFunction.Invoke(x1, i, z1);
-                    } else
+                    }
+                    else
                     {
                         color = colorFunction.Invoke(x1, y1, i);
                     }
-
-                    colors.Add(color);
-          
+                    colors.Add(color);          
                 }
 
                 if (reverseList)
@@ -234,7 +251,7 @@ namespace TheBox
                     colors.Reverse();
                 }
 
-                edge.ledColors = colors;
+                //edge.ledColors = colors;
             }
         }
 
@@ -247,42 +264,73 @@ namespace TheBox
 
         public void SetColor(Color color)
         {
-            bottom.SetColor(color);
-            front.SetColor(color);
-            right.SetColor(color);
-            back.SetColor(color);
-            left.SetColor(color);
-            top.SetColor(color);
-        }
-
-        public void SetLedColors()
-        {
-            bottom.SetLedColors();
-            front.SetLedColors();
-            right.SetLedColors();
-            back.SetLedColors();
-            left.SetLedColors();
-            top.SetLedColors();
+            if (UseFaces)
+            {
+                bottom.SetColor(color);
+                front.SetColor(color);
+                right.SetColor(color);
+                back.SetColor(color);
+                left.SetColor(color);
+                top.SetColor(color);
+            }
+            else
+            {
+                bottomZone.SetColor(color);
+                midZone.SetColor(color);
+                topZone.SetColor(color);
+            }
         }
 
         public void Reset()
         {
-            bottom.Reset();
-            front.Reset();
-            right.Reset();
-            back.Reset();
-            left.Reset();
-            top.Reset();
+            if (UseFaces)
+            {
+                bottom.Reset();
+                front.Reset();
+                right.Reset();
+                back.Reset();
+                left.Reset();
+                top.Reset();
+            }
+            else
+            {
+                bottomZone.Reset();
+                midZone.Reset();
+                topZone.Reset();
+            }
+        }
+
+        public void ResetMaxes()
+        {
+            if (UseFaces)
+            {
+
+            }
+            else
+            {
+                bottomZone.ResetMaxes();
+                midZone.ResetMaxes();
+                topZone.ResetMaxes();
+            }
         }
 
         public void Update()
         {
-            bottom.Update();
-            front.Update();
-            right.Update();
-            back.Update();
-            left.Update();
-            top.Update();
+            if (UseFaces)
+            {
+                bottom.Update();
+                front.Update();
+                right.Update();
+                back.Update();
+                left.Update();
+                top.Update();
+            }
+            else
+            {
+                bottomZone.Update();
+                midZone.Update();
+                topZone.Update();
+            }
         }
     }
 }

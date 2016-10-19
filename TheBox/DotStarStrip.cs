@@ -101,7 +101,10 @@ namespace TheBox
                 spiDataBytes[i] = endFrame[j];
                 i++;
             }
-            spiDevice.Write(spiDataBytes);
+            if (spiDevice != null)
+            {
+                spiDevice.Write(spiDataBytes);
+            }
         }
 
         // de optimized version
