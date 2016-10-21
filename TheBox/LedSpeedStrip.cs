@@ -113,18 +113,6 @@ namespace TheBox
             for (int i = 5; i >= 0; i--)
             {
                 edge.strip.strip[edge.leds[i]] = ledColors[j];
-                //if (!Reverse)
-                //{
-                //    j++;
-                //}
-                //else
-                //{
-                //    j--;
-                //    if (j < 0)
-                //    {
-                //        j = ledColors.Count - 1;
-                //    }
-                //}
                 j++;
                 j %= ledColors.Count;
             }
@@ -136,18 +124,6 @@ namespace TheBox
             for (int i = 7; i < 13; i++)
             {
                 edge.strip.strip[edge.leds[i]] = ledColors[j];
-                //if (!Reverse)
-                //{
-                //    j++;
-                //}
-                //else
-                //{
-                //    j--;
-                //    if (j < 0)
-                //    {
-                //        j = ledColors.Count - 1;
-                //    }
-                //}
                 j++;
                 j %= ledColors.Count;
             }

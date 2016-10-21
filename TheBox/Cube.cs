@@ -95,6 +95,22 @@ namespace TheBox
             }
         }
 
+        private bool reverse;
+        public bool Reverse
+        {
+            get
+            {
+                return reverse;
+            }
+            set
+            {
+                reverse = value;
+                bottomZone.Reverse = reverse;
+                midZone.Reverse = reverse;
+                topZone.Reverse = reverse;
+            }
+        }
+
         public Cube(DotStarStrip leftStrip, DotStarStrip rightStrip)
         {
             this.leftStrip = leftStrip;

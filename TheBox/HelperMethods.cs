@@ -4,11 +4,52 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Windows.UI;
 
 namespace TheBox
 {
     public static class HelperMethods
     {
+        public static void SendAlongStrip(Edge edge, List<Color> ledColors, ref int offset, int start = 0, int end = 13, bool reverse = false)
+        {
+            int j = offset;
+            if (start > end)
+            {
+                for (int i = start; i >= end; i--)
+                {
+                    edge.strip.strip[edge.leds[i]] = ledColors[j];
+                    j++;
+                    j %= ledColors.Count;
+                }
+            }
+            else
+            {
+                for (int i = start; i < end; i++)
+                {
+                    edge.strip.strip[edge.leds[i]] = ledColors[j];
+                    j++;
+                    j %= ledColors.Count;
+                }
+            }
+            if (!reverse)
+            {
+                offset++;
+                if (offset >= ledColors.Count)
+                {
+                    offset = 0;
+                }
+            }
+            else
+            {
+                offset--;
+                if (offset < 0)
+                {
+                    offset = ledColors.Count - 1;
+                }
+            }
+            edge.Update();
+        }
+
         public static float Average(float[] array, int start, int stop)
         {
             float average = 0;

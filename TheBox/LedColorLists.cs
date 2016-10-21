@@ -103,19 +103,82 @@ namespace TheBox
         public static List<Color> redAlternating = new List<Color>(new Color[]
         {
             Colors.Red,
+            Colors.Red,
+            Colors.Red,
+            Colors.Black,
+            Colors.Black,
             Colors.Black
         });
 
         public static List<Color> greenAlternating = new List<Color>(new Color[]
         {
             Colors.Green,
+            Colors.Green,
+            Colors.Green,
+            Colors.Black,
+            Colors.Black,
             Colors.Black
         });
 
         public static List<Color> blueAlternating = new List<Color>(new Color[]
         {
             Colors.Blue,
+            Colors.Blue,
+            Colors.Blue,
+            Colors.Black,
+            Colors.Black,
             Colors.Black
+        });
+
+        public static List<Color> redFlair = new List<Color>(new Color[]
+        {
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Color.FromArgb(255, 255, 0, 0),
+            Color.FromArgb(127, 255, 0, 0),
+            Color.FromArgb(30, 255, 0, 0)
+        });
+
+        public static List<Color> greenFlair = new List<Color>(new Color[]
+        {
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Color.FromArgb(255, 0, 255, 0),
+            Color.FromArgb(127, 0, 255, 0),
+            Color.FromArgb(30, 0, 255, 0)
+        });
+
+        public static List<Color> blueFlair = new List<Color>(new Color[]
+        {
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Colors.Black,
+            Color.FromArgb(255, 0, 0, 255),
+            Color.FromArgb(127, 0, 0, 255),
+            Color.FromArgb(30, 0, 0, 255)
         });
     }
 }

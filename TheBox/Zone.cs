@@ -26,6 +26,23 @@ namespace TheBox
             }
         }
 
+        private bool reverse;
+        public bool Reverse
+        {
+            get
+            {
+                return reverse;
+            }
+            set
+            {
+                reverse = value;
+                top.Reverse = reverse;
+                right.Reverse = reverse;
+                bottom.Reverse = reverse;
+                left.Reverse = reverse;
+            }
+        }
+
         public Zone(Edge front, Edge right, Edge back, Edge left) : base(front, right, back, left)
         {
         }

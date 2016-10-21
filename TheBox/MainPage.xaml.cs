@@ -42,7 +42,7 @@ namespace TheBox
             0x5500AB, 0x7F0081, 0xAB0055, 0xD5002B
         };
 
-        public enum Modes
+        public enum ActiveModes
         {
             Volumes,
             SpeedRainbow,
@@ -50,7 +50,14 @@ namespace TheBox
             SpeedSingle,
             SpeedTriRainbow
         }
-        Modes currentMode;
+        ActiveModes currentMode;
+
+        public enum IdleModes
+        {
+            Rainbow,
+            Flair
+        }
+        IdleModes idleMode;
 
         DotStarStrip leftStrip;
         DotStarStrip rightStrip;
@@ -91,9 +98,14 @@ namespace TheBox
 
         private DateTime lastChange;
         private TimeSpan changeTime;
+        private TimeSpan idleChangeTime;
         private int previousPatternValue = 0;
+        private int previousIdleValue = 0;
 
         private DateTime quietTime;
+        public bool Idle { get; set; }
+        private bool runningIdleAnimation;
+        private int previousRandomEdgeValue = 0;
 
         private bool reverse;
         public bool Reverse
@@ -117,9 +129,14 @@ namespace TheBox
             AutoCycle = true;
             Reverse = false;
             random = new Random();
-            currentMode = Modes.SpeedRainbow;
+            currentMode = ActiveModes.SpeedRainbow;
+            idleMode = IdleModes.Rainbow;
             lastChange = DateTime.UtcNow;
+            quietTime = DateTime.UtcNow;
             changeTime = TimeSpan.FromSeconds(15);
+            idleChangeTime = TimeSpan.FromSeconds(30);
+            Idle = false;
+            runningIdleAnimation = false;
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -363,24 +380,155 @@ namespace TheBox
             return Color.FromArgb(255, (byte)random.Next(0, 256), (byte)random.Next(0, 256), (byte)random.Next(256));
         }
 
-        async Task RainbowTest()
+        int rainbowMin = 50;
+        int rainbowSpeed = 150;
+        int rainbowMax = 250;
+        bool rainbowGoingDown = false;
+
+        async Task RainbowTest(float average)
         {
-            while (true)
+            runningIdleAnimation = true;
+            while (Idle)
             {
                 for (int j = 0; j < rainbow.Length; j++)
                 {
                     for (int i = 0; i < leftStrip.PixelCount; i++)
                     {
                         Color color = HexToRgb(rainbow[(i + j) % rainbow.Length]);
-                        color.A = 255;
+                        color.A = (byte)Brightness;
                         leftStrip.strip[i] = color;
                         rightStrip.strip[i] = color;
                     }
                     leftStrip.SendPixels();
                     rightStrip.SendPixels();
-                    await Task.Delay(TimeSpan.FromMilliseconds(100));
+                    await Task.Delay(TimeSpan.FromMilliseconds(rainbowSpeed));
+                    if (!rainbowGoingDown)
+                    {
+                        rainbowSpeed++;
+                    }
+                    else
+                    {
+                        rainbowSpeed--;
+                    }
+                    if (rainbowSpeed <= rainbowMin)
+                    {
+                        rainbowGoingDown = false;
+                        rainbowSpeed = rainbowMin;
+                    }
+                    else if (rainbowSpeed >= rainbowMax)
+                    {
+                        rainbowGoingDown = true;
+                        rainbowSpeed = rainbowMax;
+                    }
+                    if (!CheckForIdle(average))
+                    {
+                        break;
+                    }
+                    ChangeIdleMode();
+                    if (idleMode != IdleModes.Rainbow)
+                    {
+                        break;
+                    }
                 }
             }
+            runningIdleAnimation = false;
+        }
+
+        void Flair(float average)
+        {
+            runningIdleAnimation = true;
+            while (Idle)
+            {
+                int randomEdge = random.Next(12);
+                while (randomEdge == previousRandomEdgeValue)
+                {
+                    randomEdge = random.Next(12);
+                }
+                previousRandomEdgeValue = randomEdge;
+                ChangeReverse();
+                if (randomEdge == 0)
+                {
+                    RunFlair(cube.bottomFrontEdge);
+                }
+                else if (randomEdge == 1)
+                {
+                    RunFlair(cube.bottomRightEdge);
+                }
+                else if (randomEdge == 2)
+                {
+                    RunFlair(cube.bottomBackEdge);
+                }
+                else if (randomEdge == 3)
+                {
+                    RunFlair(cube.bottomLeftEdge);
+                }
+                else if (randomEdge == 4)
+                {
+                    RunFlair(cube.frontLeftEdge);
+                }
+                else if (randomEdge == 5)
+                {
+                    RunFlair(cube.rightLeftEdge);
+                }
+                else if (randomEdge == 6)
+                {
+                    RunFlair(cube.backLeftEdge);
+                }
+                else if (randomEdge == 7)
+                {
+                    RunFlair(cube.leftLeftEdge);
+                }
+                else if (randomEdge == 8)
+                {
+                    RunFlair(cube.frontTopEdge);
+                }
+                else if (randomEdge == 9)
+                {
+                    RunFlair(cube.rightTopEdge);
+                }
+                else if (randomEdge == 10)
+                {
+                    RunFlair(cube.backTopEdge);
+                }
+                else if (randomEdge == 11)
+                {
+                    RunFlair(cube.leftTopEdge);
+                }
+                if (!CheckForIdle(average))
+                {
+                    break;
+                }
+                ChangeIdleMode();
+                if (idleMode != IdleModes.Flair)
+                {
+                    break;
+                }
+            }
+            runningIdleAnimation = false;
+        }
+
+        private void RunFlair(Edge edge)
+        {
+            int randomColor = random.Next(3);
+            List<Color> ledColors = new List<Color>();
+            if (randomColor == 0)
+            {
+                ledColors = LedColorLists.redFlair;
+            }
+            else if (randomColor == 1)
+            {
+                ledColors = LedColorLists.greenFlair;
+            }
+            else if (randomColor == 2)
+            {
+                ledColors = LedColorLists.blueFlair;
+            }
+            do
+            {
+                edge.StepFlair(ledColors, Reverse);
+                Task.Delay(TimeSpan.FromMilliseconds(100)).Wait();
+            }
+            while (edge.flairOffset != 0);
         }
 
         async Task AudioTest()
@@ -406,7 +554,7 @@ namespace TheBox
             Debug.WriteLine("UNRECOVERABLE ERRORRRRRR");
         }
 
-        private void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
+        private async void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
         {
             AudioFrame audioFrame = frameOutputNode.GetFrame();
             List<float[]> amplitudeData = ProcessFrameOutput(audioFrame);
@@ -415,16 +563,38 @@ namespace TheBox
             {
                 float[] leftChannel = channelData[i];
                 float[] rightChannel = channelData[i + 1];
-                if (currentMode == Modes.Volumes)
+                float average = HelperMethods.Average(leftChannel);
+                CheckForIdle(average);
+                if (!Idle)
                 {
-                    LowMidHighVolumeBars(leftChannel, rightChannel);
+                    if (currentMode == ActiveModes.Volumes)
+                    {
+                        LowMidHighVolumeBars(leftChannel, rightChannel);
+                    }
+                    else
+                    {
+                        LowMidHighSpeedBars(leftChannel, rightChannel);
+                    }
                 }
                 else
                 {
-                    LowMidHighSpeedBars(leftChannel, rightChannel);
+                    if (!runningIdleAnimation)
+                    {
+                        Brightness = 127;
+                        UpdateSliderBrightness();
+                        cube.Reset();
+                        if (idleMode == IdleModes.Rainbow)
+                        {
+                            await RainbowTest(average);
+                        }
+                        else if (idleMode == IdleModes.Flair)
+                        {
+                            Flair(average);
+                        }
+                    }
                 }
             }
-            if (AutoCycle)
+            if (AutoCycle && !Idle)
             {
                 if (DateTime.UtcNow - lastChange >= changeTime)
                 {
@@ -455,34 +625,87 @@ namespace TheBox
                     {
                         speedTriRainbowButton_Click(null, null);
                     }
-
-                    int randomReverse = random.Next(2);
-                    if (randomReverse == 0)
-                    {
-                        if (Reverse)
-                        {
-                            Reverse = false;
-                            cube.ReverseSpeedStrip = Reverse;
-                            DoUIThingSync(() =>
-                            {
-                                reverseCheckbox.IsChecked = Reverse;
-                            });
-                        }
-                    }
-                    else if (randomReverse == 1)
-                    {
-                        if (!Reverse)
-                        {
-                            Reverse = true;
-                            cube.ReverseSpeedStrip = Reverse;
-                            DoUIThingSync(() =>
-                            {
-                                reverseCheckbox.IsChecked = Reverse;
-                            });
-                        }
-                    }
+                    ChangeReverse();
                 }
             }
+        }
+
+        private void ChangeIdleMode()
+        {
+            if (AutoCycle)
+            {
+                if (DateTime.UtcNow - lastChange >= idleChangeTime)
+                {
+                    int randomIdle = random.Next(2);
+                    while (randomIdle == previousIdleValue)
+                    {
+                        randomIdle = random.Next(2);
+                    }
+                    previousIdleValue = randomIdle;
+                    lastChange = DateTime.UtcNow;
+                    if (randomIdle == 0)
+                    {
+                        idleMode = IdleModes.Rainbow;
+                    }
+                    else if (randomIdle == 1)
+                    {
+                        idleMode = IdleModes.Flair;
+                    }
+                    ChangeReverse();
+                }
+            }
+        }
+
+        public void ChangeReverse()
+        {
+            int randomReverse = random.Next(2);
+            if (randomReverse == 0)
+            {
+                if (Reverse)
+                {
+                    Reverse = false;
+                    cube.Reverse = Reverse;
+                    cube.ReverseSpeedStrip = Reverse;
+                    DoUIThingSync(() =>
+                    {
+                        reverseCheckbox.IsChecked = Reverse;
+                    });
+                }
+            }
+            else if (randomReverse == 1)
+            {
+                if (!Reverse)
+                {
+                    Reverse = true;
+                    cube.Reverse = Reverse;
+                    cube.ReverseSpeedStrip = Reverse;
+                    DoUIThingSync(() =>
+                    {
+                        reverseCheckbox.IsChecked = Reverse;
+                    });
+                }
+            }
+        }
+
+        bool CheckForIdle(float average)
+        {
+            if (average < 0.0007)
+            {
+                if (DateTime.UtcNow - quietTime >= TimeSpan.FromSeconds(10))
+                {
+                    Idle = true;
+                    return true;
+                }
+            }
+            else
+            {
+                quietTime = DateTime.UtcNow;
+                if (Idle)
+                {
+                    Idle = false;
+                }
+            }
+            return false;
         }
 
         void LowMidHighSpeedBars(float[] leftChannel, float[] rightChannel)
@@ -721,7 +944,7 @@ namespace TheBox
         private void volumesButton_Click(object sender, RoutedEventArgs e)
         {
             ResetLevels();
-            currentMode = Modes.Volumes;
+            currentMode = ActiveModes.Volumes;
             cube.SetColor(Colors.Black);
             cube.Update();
             Brightness = 30;
@@ -731,7 +954,7 @@ namespace TheBox
         private void speedRainbowButton_Click(object sender, RoutedEventArgs e)
         {
             cube.SetSpeedStripLedColors(LedColorLists.rainbowColors);
-            currentMode = Modes.SpeedRainbow;
+            currentMode = ActiveModes.SpeedRainbow;
             cube.SetColor(Colors.Black);
             cube.Update();
             Brightness = 127;
@@ -743,7 +966,7 @@ namespace TheBox
             cube.bottomZone.SetSpeedStripLedColors(LedColorLists.redAlternating);
             cube.midZone.SetSpeedStripLedColors(LedColorLists.greenAlternating);
             cube.topZone.SetSpeedStripLedColors(LedColorLists.blueAlternating);
-            currentMode = Modes.SpeedAlternating;
+            currentMode = ActiveModes.SpeedAlternating;
             cube.SetColor(Colors.Black);
             cube.Update();
             Brightness = 127;
@@ -755,7 +978,7 @@ namespace TheBox
             cube.bottomZone.SetSpeedStripLedColors(LedColorLists.redSingle);
             cube.midZone.SetSpeedStripLedColors(LedColorLists.greenSingle);
             cube.topZone.SetSpeedStripLedColors(LedColorLists.blueSingle);
-            currentMode = Modes.SpeedSingle;
+            currentMode = ActiveModes.SpeedSingle;
             cube.SetColor(Colors.Black);
             cube.Update();
             Brightness = 255;
@@ -767,7 +990,7 @@ namespace TheBox
             cube.bottomZone.SetSpeedStripLedColors(LedColorLists.redRainbow);
             cube.midZone.SetSpeedStripLedColors(LedColorLists.greenRainbow);
             cube.topZone.SetSpeedStripLedColors(LedColorLists.blueRainbow);
-            currentMode = Modes.SpeedTriRainbow;
+            currentMode = ActiveModes.SpeedTriRainbow;
             cube.SetColor(Colors.Black);
             cube.Update();
             Brightness = 127;
@@ -779,6 +1002,14 @@ namespace TheBox
             DoUIThingSync(() =>
             {
                 brightnessSlider.Value = Brightness;
+            });
+        }
+
+        void UpdateAutoCycle()
+        {
+            DoUIThingSync(() =>
+            {
+                autoCycleCheckbox.IsChecked = AutoCycle;
             });
         }
 

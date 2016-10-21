@@ -64,6 +64,8 @@ namespace TheBox
             }
         }
 
+        public int flairOffset;
+
         public Edge(int start, int end, DotStarStrip strip)
         {
             this.strip = strip;
@@ -80,6 +82,7 @@ namespace TheBox
             float speedRollover = 0.5f;
             speedStripBeginning = new LedSpeedStrip(this, LedSpeedStrip.Sides.MiddleToBeginning, speedRollover);
             speedStripEnd = new LedSpeedStrip(this, LedSpeedStrip.Sides.MiddleToEnd, speedRollover);
+            flairOffset = 0;
         }
 
         public void SetSpeedStripLedColors(List<Color> ledColors)
@@ -101,6 +104,11 @@ namespace TheBox
             {
                 strip.strip[i] = color;
             }
+        }
+
+        public void StepFlair(List<Color> ledColors, bool reverse)
+        {
+            HelperMethods.SendAlongStrip(this, ledColors, ref flairOffset, reverse: reverse);
         }
 
         public void Reset()
@@ -130,7 +138,7 @@ namespace TheBox
             }
             else
             {
-                DoMiddleToEnd(val, color);
+                DoBeginningToMiddle(val, color);
             }
         }
 
@@ -145,7 +153,7 @@ namespace TheBox
             }
             else
             {
-                DoMiddleToBeginning(val, color);
+                DoEndToMiddle(val, color);
             }
         }
 
@@ -159,9 +167,22 @@ namespace TheBox
                 }
                 else
                 {
-                    Color white = Colors.Black;
-                    white.A = Brightness;
-                    strip.strip[leds[i]] = white;
+                    strip.strip[leds[i]] = Colors.Black;
+                }
+            }
+        }
+
+        private void DoBeginningToMiddle(float value, Color color)
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                if (i < Math.Floor(value * 6f))
+                {
+                    strip.strip[leds[i]] = color;
+                }
+                else
+                {
+                    strip.strip[leds[i]] = Colors.Black;
                 }
             }
         }
@@ -176,9 +197,22 @@ namespace TheBox
                 }
                 else
                 {
-                    Color white = Colors.Black;
-                    white.A = Brightness;
-                    strip.strip[leds[i]] = white;
+                    strip.strip[leds[i]] = Colors.Black;
+                }
+            }
+        }
+
+        private void DoEndToMiddle(float value, Color color)
+        {
+            for (int i = 12; i >= 7; i--)
+            {
+                if (i >= 13 - Math.Floor(value * 6f))
+                {
+                    strip.strip[leds[i]] = color;
+                }
+                else
+                {
+                    strip.strip[leds[i]] = Colors.Black;
                 }
             }
         }
