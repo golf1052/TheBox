@@ -35,7 +35,8 @@ namespace TheBox
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        const int desiredNumberOfSamples = 8;
+        // this should be double the number of desired samples
+        const int desiredNumberOfSamples = 16;
 
         int[] rainbow = {
             0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
@@ -68,10 +69,8 @@ namespace TheBox
         AudioFrameOutputNode frameOutputNode;
 
         DeviceInformation audioInput;
-        //DeviceInformation audioOutput;
-        //DeviceInformation raspiAudioOutput;
-
-        Cube cube;
+        DeviceInformation audioOutput;
+        DeviceInformation raspiAudioOutput;
 
         const int LowCutoff = 15;
         const int MidCutoff = 100;
@@ -86,11 +85,6 @@ namespace TheBox
             set
             {
                 brightness = value;
-                if (cube != null)
-                {
-                    cube.Brightness = (byte)brightness;
-                    cube.Update();
-                }
             }
         }
 
@@ -125,7 +119,7 @@ namespace TheBox
         public MainPage()
         {
             this.InitializeComponent();
-            //leftStrip = new DotStarStrip(78, "SPI0");
+            leftStrip = new DotStarStrip(7, "SPI0");
             //rightStrip = new DotStarStrip(78, "SPI1");
             //cube = new Cube(leftStrip, rightStrip);
             AutoCycle = true;
@@ -164,27 +158,29 @@ namespace TheBox
                 Debug.WriteLine("Could not find USB audio card");
                 return;
             }
-            //var audioOutputDevices = await DeviceInformation.FindAllAsync(DeviceClass.AudioRender);
-            //foreach (var device in audioOutputDevices)
-            //{
-            //    if (device.Name.ToLower().Contains("usb"))
-            //    {
-            //        audioOutput = device;
-            //    }
-            //    else
-            //    {
-            //        raspiAudioOutput = device;
-            //    }
-            //}
-            //if (audioOutput == null)
-            //{
-            //    Debug.WriteLine("Could not find USB audio card");
-            //    return;
-            //}
-            
+            var audioOutputDevices = await DeviceInformation.FindAllAsync(DeviceClass.AudioRender);
+            foreach (var device in audioOutputDevices)
+            {
+                if (device.Name.ToLower().Contains("usb"))
+                {
+                    audioOutput = device;
+                }
+                else
+                {
+                    raspiAudioOutput = device;
+                }
+            }
+            if (audioOutput == null)
+            {
+                Debug.WriteLine("Could not find USB audio card");
+                return;
+            }
+
             // Set up LED strips
-            //await leftStrip.Begin();
+            await leftStrip.Begin();
             //await rightStrip.Begin();
+            leftStrip.ResetPixels(Colors.Blue);
+            leftStrip.SendPixels();
             //await AudioTest();
             AudioGraphSettings audioGraphSettings = new AudioGraphSettings(AudioRenderCategory.Media);
             audioGraphSettings.DesiredSamplesPerQuantum = 128;
@@ -206,24 +202,21 @@ namespace TheBox
                 return;
             }
             AudioDeviceInputNode inputNode = inputNodeResult.DeviceInputNode;
-            //CreateAudioDeviceOutputNodeResult outputNodeResult = await audioGraph.CreateDeviceOutputNodeAsync();
-            //if (outputNodeResult.Status != AudioDeviceNodeCreationStatus.Success)
-            //{
-            //    Debug.WriteLine("AudioDeviceOutputNode creation failed!" + outputNodeResult.Status);
-            //}
-            //AudioDeviceOutputNode outputNode = outputNodeResult.DeviceOutputNode;
+            CreateAudioDeviceOutputNodeResult outputNodeResult = await audioGraph.CreateDeviceOutputNodeAsync();
+            if (outputNodeResult.Status != AudioDeviceNodeCreationStatus.Success)
+            {
+                Debug.WriteLine("AudioDeviceOutputNode creation failed!" + outputNodeResult.Status);
+            }
+            AudioDeviceOutputNode outputNode = outputNodeResult.DeviceOutputNode;
             frameOutputNode = audioGraph.CreateFrameOutputNode();
             inputNode.AddOutgoingConnection(frameOutputNode);
-            //inputNode.AddOutgoingConnection(outputNode);
-            cube.SetSpeedStripLedColors(LedColorLists.rainbowColors);
+            inputNode.AddOutgoingConnection(outputNode);
             audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
             audioGraph.UnrecoverableErrorOccurred += AudioGraph_UnrecoverableErrorOccurred;
             audioGraph.Start();
-            //outputNode.Start();
+            outputNode.Start();
             inputNode.Start();
             frameOutputNode.Start();
-            cube.Reset();
-            cube.Update();
             //await MathFunc();
             //cube.ApplyColorFunction((x, y, z) =>
             //{
@@ -263,124 +256,6 @@ namespace TheBox
             //cube.Update();
             //await cube.rightLeftEdge.DoLine();
             //ZackTest();
-        }
-
-        async Task MathFunc()
-        {
-            // z = sin(sqrt(x^2+y^2)) from 0 to 2p1
-            while (true)
-            {
-                for (int i = 1; i < 32; i++)
-                {
-                    var j = Math.Abs(i - 16.0);
-                    cube.ApplyColorFunction((x, y, z) =>
-                    {
-                        var xp = x / 14.0 * 2 * Math.PI; // 0, 2PI
-                        var yp = y / 14.0 * 2 * Math.PI; // 0, 2PI
-                        var zc = Math.Abs(Math.Sin(Math.Sqrt(Math.Pow(xp, 2) + Math.Pow(yp, 2))));
-                        var phase = j * 16;
-                        if (phase == 256)
-                        {
-                            phase = 255;
-                        }
-                        Color c = Color.FromArgb(255,
-                            (byte)((((Math.Abs(x - 7.0) / 7.0) * 255.0) + phase) % 255.0),
-                            (byte)((((Math.Abs(y - 7.0) / 7.0) * 255.0) + phase) % 255.0),
-                            (byte)(((zc * 255.0) + phase) % 255.0));
-                        return c;
-                    });
-                    //cube.SetLedColors();
-                    cube.Update();
-                    await Task.Delay(TimeSpan.FromMilliseconds(16));
-                }
-            }
-            
-        }
-
-        void ZackTest()
-        {
-            while (true)
-            {
-                cube.SetColor(Colors.Red);
-                cube.Update();
-                cube.SetColor(Colors.Green);
-                cube.Update();
-                cube.SetColor(Colors.Blue);
-                cube.Update();
-            }
-        }
-
-        async Task FadeTest()
-        {
-            bool ascending = false;
-            cube.SetColor(Colors.Red);
-            while (true)
-            {
-                if (ascending)
-                {
-                    cube.Brightness++;
-                    if (cube.Brightness >= 255)
-                    {
-                        ascending = false;
-                        cube.Brightness = 255;
-                    }
-                }
-                else
-                {
-                    cube.Brightness--;
-                    if (cube.Brightness <= 0)
-                    {
-                        ascending = true;
-                        cube.Brightness = 0;
-                    }
-                }
-                cube.Update();
-                await Task.Delay(TimeSpan.FromMilliseconds(1/120));
-            }
-        }
-
-        void SetAll()
-        {
-            cube.SetColor(Colors.Red);
-            cube.Update();
-        }
-
-        async Task FlashTest()
-        {
-            Random random = new Random();
-
-            while (true)
-            {
-                cube.top.Reset();
-                cube.bottom.SetColor(RandomColor());
-                cube.Update();
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
-
-                cube.bottom.Reset();
-                cube.front.SetColor(RandomColor());
-                cube.Update();
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
-
-                cube.front.Reset();
-                cube.right.SetColor(RandomColor());
-                cube.Update();
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
-
-                cube.right.Reset();
-                cube.back.SetColor(RandomColor());
-                cube.Update();
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
-
-                cube.back.Reset();
-                cube.left.SetColor(RandomColor());
-                cube.Update();
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
-
-                cube.left.Reset();
-                cube.top.SetColor(RandomColor());
-                cube.Update();
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
-            }
         }
 
         Color RandomColor()
@@ -455,54 +330,6 @@ namespace TheBox
                 }
                 previousRandomEdgeValue = randomEdge;
                 ChangeReverse();
-                if (randomEdge == 0)
-                {
-                    RunFlair(cube.bottomFrontEdge);
-                }
-                else if (randomEdge == 1)
-                {
-                    RunFlair(cube.bottomRightEdge);
-                }
-                else if (randomEdge == 2)
-                {
-                    RunFlair(cube.bottomBackEdge);
-                }
-                else if (randomEdge == 3)
-                {
-                    RunFlair(cube.bottomLeftEdge);
-                }
-                else if (randomEdge == 4)
-                {
-                    RunFlair(cube.frontLeftEdge);
-                }
-                else if (randomEdge == 5)
-                {
-                    RunFlair(cube.rightLeftEdge);
-                }
-                else if (randomEdge == 6)
-                {
-                    RunFlair(cube.backLeftEdge);
-                }
-                else if (randomEdge == 7)
-                {
-                    RunFlair(cube.leftLeftEdge);
-                }
-                else if (randomEdge == 8)
-                {
-                    RunFlair(cube.frontTopEdge);
-                }
-                else if (randomEdge == 9)
-                {
-                    RunFlair(cube.rightTopEdge);
-                }
-                else if (randomEdge == 10)
-                {
-                    RunFlair(cube.backTopEdge);
-                }
-                else if (randomEdge == 11)
-                {
-                    RunFlair(cube.leftTopEdge);
-                }
                 if (!CheckForIdle(average))
                 {
                     break;
@@ -563,80 +390,82 @@ namespace TheBox
             Debug.WriteLine("UNRECOVERABLE ERRORRRRRR");
         }
 
-        private async void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
+        private void AudioGraph_QuantumProcessed(AudioGraph sender, object args)
         {
             AudioFrame audioFrame = frameOutputNode.GetFrame();
             List<float[]> amplitudeData = ProcessFrameOutput(audioFrame);
             List<float[]> channelData = GetFftData(ConvertToX(amplitudeData, desiredNumberOfSamples));
-            for (int i = 0; i < channelData.Count / 2; i++)
+            if (channelData != null)
             {
-                float[] leftChannel = channelData[i];
-                float[] rightChannel = channelData[i + 1];
-                float average = HelperMethods.Average(leftChannel);
-                CheckForIdle(average);
-                if (!Idle)
+                for (int i = 0; i < channelData.Count / 2; i++)
                 {
-                    if (currentMode == ActiveModes.Volumes)
-                    {
-                        LowMidHighVolumeBars(leftChannel, rightChannel);
-                    }
-                    else
-                    {
-                        LowMidHighSpeedBars(leftChannel, rightChannel);
-                    }
-                }
-                else
-                {
-                    if (!runningIdleAnimation)
-                    {
-                        Brightness = 127;
-                        UpdateSliderBrightness();
-                        cube.Reset();
-                        if (idleMode == IdleModes.Rainbow)
-                        {
-                            await RainbowTest(average);
-                        }
-                        else if (idleMode == IdleModes.Flair)
-                        {
-                            Flair(average);
-                        }
-                    }
+                    float[] leftChannel = channelData[i];
+                    float[] rightChannel = channelData[i + 1];
+                    float average = HelperMethods.Average(leftChannel);
+                    //CheckForIdle(average);
+                    //if (!Idle)
+                    //{
+                    //    if (currentMode == ActiveModes.Volumes)
+                    //    {
+                    //        LowMidHighVolumeBars(leftChannel, rightChannel);
+                    //    }
+                    //    else
+                    //    {
+                    //        LowMidHighSpeedBars(leftChannel, rightChannel);
+                    //    }
+                    //}
+                    //else
+                    //{
+                    //    if (!runningIdleAnimation)
+                    //    {
+                    //        Brightness = 127;
+                    //        UpdateSliderBrightness();
+                    //        if (idleMode == IdleModes.Rainbow)
+                    //        {
+                    //            await RainbowTest(average);
+                    //        }
+                    //        else if (idleMode == IdleModes.Flair)
+                    //        {
+                    //            Flair(average);
+                    //        }
+                    //    }
+                    //}
                 }
             }
-            if (AutoCycle && !Idle)
-            {
-                if (DateTime.UtcNow - lastChange >= changeTime)
-                {
-                    int randomPattern = random.Next(5);
-                    while (randomPattern == previousPatternValue)
-                    {
-                        randomPattern = random.Next(5);
-                    }
-                    previousPatternValue = randomPattern;
-                    lastChange = DateTime.UtcNow;
-                    if (randomPattern == 0)
-                    {
-                        volumesButton_Click(null, null);
-                    }
-                    else if (randomPattern == 1)
-                    {
-                        speedRainbowButton_Click(null, null);
-                    }
-                    else if (randomPattern == 2)
-                    {
-                        speedAlternatingButton_Click(null, null);
-                    }
-                    else if (randomPattern == 3)
-                    {
-                        speedSingleButton_Click(null, null);
-                    }
-                    else if (randomPattern == 4)
-                    {
-                        speedTriRainbowButton_Click(null, null);
-                    }
-                    ChangeReverse();
-                }
-            }
+            //if (AutoCycle && !Idle)
+            //{
+            //    if (DateTime.UtcNow - lastChange >= changeTime)
+            //    {
+            //        int randomPattern = random.Next(5);
+            //        while (randomPattern == previousPatternValue)
+            //        {
+            //            randomPattern = random.Next(5);
+            //        }
+            //        previousPatternValue = randomPattern;
+            //        lastChange = DateTime.UtcNow;
+            //        if (randomPattern == 0)
+            //        {
+            //            volumesButton_Click(null, null);
+            //        }
+            //        else if (randomPattern == 1)
+            //        {
+            //            speedRainbowButton_Click(null, null);
+            //        }
+            //        else if (randomPattern == 2)
+            //        {
+            //            speedAlternatingButton_Click(null, null);
+            //        }
+            //        else if (randomPattern == 3)
+            //        {
+            //            speedSingleButton_Click(null, null);
+            //        }
+            //        else if (randomPattern == 4)
+            //        {
+            //            speedTriRainbowButton_Click(null, null);
+            //        }
+            //        ChangeReverse();
+            //    }
+            //}
         }
 
         private void ChangeIdleMode()
@@ -673,8 +502,6 @@ namespace TheBox
                 if (Reverse)
                 {
                     Reverse = false;
-                    cube.Reverse = Reverse;
-                    cube.ReverseSpeedStrip = Reverse;
                     DoUIThingSync(() =>
                     {
                         reverseCheckbox.IsChecked = Reverse;
@@ -686,8 +513,6 @@ namespace TheBox
                 if (!Reverse)
                 {
                     Reverse = true;
-                    cube.Reverse = Reverse;
-                    cube.ReverseSpeedStrip = Reverse;
                     DoUIThingSync(() =>
                     {
                         reverseCheckbox.IsChecked = Reverse;
@@ -725,30 +550,6 @@ namespace TheBox
             float rightMidAverage = HelperMethods.Average(rightChannel, LowCutoff, MidCutoff);
             float leftHighAverage = HelperMethods.Average(leftChannel, MidCutoff);
             float rightHighAverage = HelperMethods.Average(rightChannel, MidCutoff);
-            cube.bottomFrontEdge.speedStripBeginning.UpdateSpeed(leftLowAverage);
-            cube.bottomFrontEdge.speedStripEnd.UpdateSpeed(rightLowAverage);
-            cube.bottomRightEdge.speedStripBeginning.UpdateSpeed(leftLowAverage);
-            cube.bottomRightEdge.speedStripEnd.UpdateSpeed(rightLowAverage);
-            cube.bottomBackEdge.speedStripBeginning.UpdateSpeed(leftLowAverage);
-            cube.bottomBackEdge.speedStripEnd.UpdateSpeed(rightLowAverage);
-            cube.bottomLeftEdge.speedStripBeginning.UpdateSpeed(leftLowAverage);
-            cube.bottomLeftEdge.speedStripEnd.UpdateSpeed(rightLowAverage);
-            cube.frontLeftEdge.speedStripBeginning.UpdateSpeed(leftMidAverage);
-            cube.frontLeftEdge.speedStripEnd.UpdateSpeed(rightMidAverage);
-            cube.rightLeftEdge.speedStripBeginning.UpdateSpeed(leftMidAverage);
-            cube.rightLeftEdge.speedStripEnd.UpdateSpeed(rightMidAverage);
-            cube.backLeftEdge.speedStripBeginning.UpdateSpeed(leftMidAverage);
-            cube.backLeftEdge.speedStripEnd.UpdateSpeed(rightMidAverage);
-            cube.leftLeftEdge.speedStripBeginning.UpdateSpeed(leftMidAverage);
-            cube.leftLeftEdge.speedStripEnd.UpdateSpeed(rightMidAverage);
-            cube.frontTopEdge.speedStripBeginning.UpdateSpeed(leftHighAverage);
-            cube.frontTopEdge.speedStripEnd.UpdateSpeed(rightHighAverage);
-            cube.rightTopEdge.speedStripBeginning.UpdateSpeed(leftHighAverage);
-            cube.rightTopEdge.speedStripEnd.UpdateSpeed(rightHighAverage);
-            cube.backTopEdge.speedStripBeginning.UpdateSpeed(leftHighAverage);
-            cube.backTopEdge.speedStripEnd.UpdateSpeed(rightHighAverage);
-            cube.leftTopEdge.speedStripBeginning.UpdateSpeed(leftHighAverage);
-            cube.leftTopEdge.speedStripEnd.UpdateSpeed(rightHighAverage);
         }
 
         void LowMidHighVolumeBars(float[] leftChannel, float[] rightChannel)
@@ -759,32 +560,6 @@ namespace TheBox
             float rightMidAverage = HelperMethods.Average(rightChannel, LowCutoff, MidCutoff);
             float leftHighAverage = HelperMethods.Average(leftChannel, MidCutoff);
             float rightHighAverage = HelperMethods.Average(rightChannel, MidCutoff);
-
-            cube.bottomFrontEdge.UpdateLeft(leftLowAverage, Colors.Red);
-            cube.bottomFrontEdge.UpdateRight(rightLowAverage, Colors.Red);
-            cube.bottomRightEdge.UpdateLeft(leftLowAverage, Colors.Red);
-            cube.bottomRightEdge.UpdateRight(rightLowAverage, Colors.Red);
-            cube.bottomBackEdge.UpdateLeft(leftLowAverage, Colors.Red);
-            cube.bottomBackEdge.UpdateRight(rightLowAverage, Colors.Red);
-            cube.bottomLeftEdge.UpdateLeft(leftLowAverage, Colors.Red);
-            cube.bottomLeftEdge.UpdateRight(rightLowAverage, Colors.Red);
-            cube.frontLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-            cube.frontLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-            cube.rightLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-            cube.rightLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-            cube.backLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-            cube.backLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-            cube.leftLeftEdge.UpdateLeft(leftMidAverage, Colors.Green);
-            cube.leftLeftEdge.UpdateRight(rightMidAverage, Colors.Green);
-            cube.frontTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-            cube.frontTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-            cube.rightTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-            cube.rightTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-            cube.backTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-            cube.backTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-            cube.leftTopEdge.UpdateLeft(leftHighAverage, Colors.Blue);
-            cube.leftTopEdge.UpdateRight(rightHighAverage, Colors.Blue);
-            cube.Update();
         }
 
         List<float[]> ConvertToX(List<float[]> channelData, int numberOfSamples)
@@ -794,6 +569,8 @@ namespace TheBox
             float[] rightChannel = channelData[1];
             if (numberOfSamples > leftChannel.Length)
             {
+                // sometimes we get multiples of the number of samples we wanted
+                // so break up the multiples so they are the size we expected
                 for (int i = 0; i < leftChannel.Length / audioGraph.SamplesPerQuantum; i++)
                 {
                     float[] tmpLeftChannelData = new float[numberOfSamples];
@@ -818,15 +595,19 @@ namespace TheBox
             }
             else
             {
-                float[] tmpLeftChannelData = new float[numberOfSamples];
-                float[] tmpRightChannelData = new float[numberOfSamples];
-                for (int i = 0; i < leftChannel.Length / numberOfSamples; i++)
+                for (int i = 0; i < leftChannel.Length / audioGraph.SamplesPerQuantum; i++)
                 {
-                    tmpLeftChannelData[i] = HelperMethods.Average(leftChannel, i * numberOfSamples, (i + 1) * numberOfSamples);
-                    tmpRightChannelData[i] = HelperMethods.Average(rightChannel, i * numberOfSamples, (i + 1) * numberOfSamples);
+                    float[] tmpLeftChannelData = new float[numberOfSamples];
+                    float[] tmpRightChannelData = new float[numberOfSamples];
+
+                    for (int j = 0; j < numberOfSamples; j++)
+                    {
+                        tmpLeftChannelData[j] = HelperMethods.Average(leftChannel, j * numberOfSamples + audioGraph.SamplesPerQuantum * i, (j + 1) * numberOfSamples + audioGraph.SamplesPerQuantum * i);
+                        tmpRightChannelData[j] = HelperMethods.Average(rightChannel, j * numberOfSamples + audioGraph.SamplesPerQuantum * i, (j + 1) * numberOfSamples + audioGraph.SamplesPerQuantum * i);
+                    }
+                    newChannelData.Add(tmpLeftChannelData);
+                    newChannelData.Add(tmpRightChannelData);
                 }
-                newChannelData.Add(tmpLeftChannelData);
-                newChannelData.Add(tmpRightChannelData);
             }
             return newChannelData;
         }
@@ -846,7 +627,7 @@ namespace TheBox
 
         float[] GetFftChannelData(float[] channelData)
         {
-            Complex[] fftData = new Complex[512];
+            Complex[] fftData = new Complex[desiredNumberOfSamples];
             for (int j = 0; j < fftData.Length; j++)
             {
                 Complex c = new Complex();
@@ -854,7 +635,7 @@ namespace TheBox
                 fftData[j] = c;
             }
             Fft.FFT(fftData, Fft.Direction.Forward);
-            float[] fftResult = new float[audioGraph.SamplesPerQuantum / 2];
+            float[] fftResult = new float[desiredNumberOfSamples / 2];
             for (int j = 0; j < fftResult.Length; j++)
             {
                 fftResult[j] = Math.Abs((float)Math.Sqrt(Math.Pow(fftData[j].Re, 2) + Math.Pow(fftData[j].Im, 2)));
@@ -958,65 +739,40 @@ namespace TheBox
 
         private void brightnessSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
-            if (cube != null)
-            {
-                cube.Brightness = (byte)e.NewValue;
-                cube.Update();
-            }
         }
 
         private void volumesButton_Click(object sender, RoutedEventArgs e)
         {
             ResetLevels();
             currentMode = ActiveModes.Volumes;
-            cube.SetColor(Colors.Black);
-            cube.Update();
             Brightness = 30;
             UpdateSliderBrightness();
         }
 
         private void speedRainbowButton_Click(object sender, RoutedEventArgs e)
         {
-            cube.SetSpeedStripLedColors(LedColorLists.rainbowColors);
             currentMode = ActiveModes.SpeedRainbow;
-            cube.SetColor(Colors.Black);
-            cube.Update();
             Brightness = 127;
             UpdateSliderBrightness();
         }
 
         private void speedAlternatingButton_Click(object sender, RoutedEventArgs e)
         {
-            cube.bottomZone.SetSpeedStripLedColors(LedColorLists.redAlternating);
-            cube.midZone.SetSpeedStripLedColors(LedColorLists.greenAlternating);
-            cube.topZone.SetSpeedStripLedColors(LedColorLists.blueAlternating);
             currentMode = ActiveModes.SpeedAlternating;
-            cube.SetColor(Colors.Black);
-            cube.Update();
             Brightness = 127;
             UpdateSliderBrightness();
         }
 
         private void speedSingleButton_Click(object sender, RoutedEventArgs e)
         {
-            cube.bottomZone.SetSpeedStripLedColors(LedColorLists.redSingle);
-            cube.midZone.SetSpeedStripLedColors(LedColorLists.greenSingle);
-            cube.topZone.SetSpeedStripLedColors(LedColorLists.blueSingle);
             currentMode = ActiveModes.SpeedSingle;
-            cube.SetColor(Colors.Black);
-            cube.Update();
             Brightness = 255;
             UpdateSliderBrightness();
         }
 
         private void speedTriRainbowButton_Click(object sender, RoutedEventArgs e)
         {
-            cube.bottomZone.SetSpeedStripLedColors(LedColorLists.redRainbow);
-            cube.midZone.SetSpeedStripLedColors(LedColorLists.greenRainbow);
-            cube.topZone.SetSpeedStripLedColors(LedColorLists.blueRainbow);
             currentMode = ActiveModes.SpeedTriRainbow;
-            cube.SetColor(Colors.Black);
-            cube.Update();
             Brightness = 127;
             UpdateSliderBrightness();
         }
@@ -1044,7 +800,6 @@ namespace TheBox
 
         void ResetLevels()
         {
-            cube.ResetMaxes();
         }
 
         private void autoCycleCheckbox_Click(object sender, RoutedEventArgs e)
@@ -1068,19 +823,10 @@ namespace TheBox
             if (reverseCheckbox.IsChecked.HasValue && reverseCheckbox.IsChecked.Value)
             {
                 Reverse = true;
-                if (cube != null)
-                {
-                    cube.ReverseSpeedStrip = Reverse;
-                }
-                
             }
             else
             {
                 Reverse = false;
-                if (cube != null)
-                {
-                    cube.ReverseSpeedStrip = Reverse;
-                }
             }
         }
     }
