@@ -35,6 +35,8 @@ namespace TheBox
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        const int desiredNumberOfSamples = 8;
+
         int[] rainbow = {
             0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
             0xABAB00, 0x56D500, 0x00FF00, 0x00D52A,
@@ -66,8 +68,8 @@ namespace TheBox
         AudioFrameOutputNode frameOutputNode;
 
         DeviceInformation audioInput;
-        DeviceInformation audioOutput;
-        DeviceInformation raspiAudioOutput;
+        //DeviceInformation audioOutput;
+        //DeviceInformation raspiAudioOutput;
 
         Cube cube;
 
@@ -123,9 +125,9 @@ namespace TheBox
         public MainPage()
         {
             this.InitializeComponent();
-            leftStrip = new DotStarStrip(78, "SPI0");
-            rightStrip = new DotStarStrip(78, "SPI1");
-            cube = new Cube(leftStrip, rightStrip);
+            //leftStrip = new DotStarStrip(78, "SPI0");
+            //rightStrip = new DotStarStrip(78, "SPI1");
+            //cube = new Cube(leftStrip, rightStrip);
             AutoCycle = true;
             Reverse = false;
             random = new Random();
@@ -144,7 +146,14 @@ namespace TheBox
             var audioInputDevices = await DeviceInformation.FindAllAsync(DeviceClass.AudioCapture);
             foreach (var device in audioInputDevices)
             {
+                Debug.WriteLine(device.Name);
+                // need to select the device to listen on microphone
                 if (device.Name.ToLower().Contains("usb"))
+                {
+                    audioInput = device;
+                    break;
+                }
+                else if (device.Name.ToLower().Contains("microphone"))
                 {
                     audioInput = device;
                     break;
@@ -155,33 +164,33 @@ namespace TheBox
                 Debug.WriteLine("Could not find USB audio card");
                 return;
             }
-            var audioOutputDevices = await DeviceInformation.FindAllAsync(DeviceClass.AudioRender);
-            foreach (var device in audioOutputDevices)
-            {
-                if (device.Name.ToLower().Contains("usb"))
-                {
-                    audioOutput = device;
-                }
-                else
-                {
-                    raspiAudioOutput = device;
-                }
-            }
-            if (audioOutput == null)
-            {
-                Debug.WriteLine("Could not find USB audio card");
-                return;
-            }
+            //var audioOutputDevices = await DeviceInformation.FindAllAsync(DeviceClass.AudioRender);
+            //foreach (var device in audioOutputDevices)
+            //{
+            //    if (device.Name.ToLower().Contains("usb"))
+            //    {
+            //        audioOutput = device;
+            //    }
+            //    else
+            //    {
+            //        raspiAudioOutput = device;
+            //    }
+            //}
+            //if (audioOutput == null)
+            //{
+            //    Debug.WriteLine("Could not find USB audio card");
+            //    return;
+            //}
             
             // Set up LED strips
-            await leftStrip.Begin();
-            await rightStrip.Begin();
+            //await leftStrip.Begin();
+            //await rightStrip.Begin();
             //await AudioTest();
             AudioGraphSettings audioGraphSettings = new AudioGraphSettings(AudioRenderCategory.Media);
-            audioGraphSettings.DesiredSamplesPerQuantum = 440;
+            audioGraphSettings.DesiredSamplesPerQuantum = 128;
             audioGraphSettings.DesiredRenderDeviceAudioProcessing = AudioProcessing.Default;
             audioGraphSettings.QuantumSizeSelectionMode = QuantumSizeSelectionMode.ClosestToDesired;
-            audioGraphSettings.PrimaryRenderDevice = raspiAudioOutput;
+            //audioGraphSettings.PrimaryRenderDevice = raspiAudioOutput;
             CreateAudioGraphResult audioGraphResult = await AudioGraph.CreateAsync(audioGraphSettings);
             if (audioGraphResult.Status != AudioGraphCreationStatus.Success)
             {
@@ -189,7 +198,7 @@ namespace TheBox
                 return;
             }
             audioGraph = audioGraphResult.Graph;
-            //Debug.WriteLine(audioGraph.SamplesPerQuantum);
+            Debug.WriteLine(audioGraph.SamplesPerQuantum);
             CreateAudioDeviceInputNodeResult inputNodeResult = await audioGraph.CreateDeviceInputNodeAsync(MediaCategory.Media, audioGraph.EncodingProperties, audioInput);
             if (inputNodeResult.Status != AudioDeviceNodeCreationStatus.Success)
             {
@@ -197,20 +206,20 @@ namespace TheBox
                 return;
             }
             AudioDeviceInputNode inputNode = inputNodeResult.DeviceInputNode;
-            CreateAudioDeviceOutputNodeResult outputNodeResult = await audioGraph.CreateDeviceOutputNodeAsync();
-            if (outputNodeResult.Status != AudioDeviceNodeCreationStatus.Success)
-            {
-                Debug.WriteLine("AudioDeviceOutputNode creation failed!" + outputNodeResult.Status);
-            }
-            AudioDeviceOutputNode outputNode = outputNodeResult.DeviceOutputNode;
+            //CreateAudioDeviceOutputNodeResult outputNodeResult = await audioGraph.CreateDeviceOutputNodeAsync();
+            //if (outputNodeResult.Status != AudioDeviceNodeCreationStatus.Success)
+            //{
+            //    Debug.WriteLine("AudioDeviceOutputNode creation failed!" + outputNodeResult.Status);
+            //}
+            //AudioDeviceOutputNode outputNode = outputNodeResult.DeviceOutputNode;
             frameOutputNode = audioGraph.CreateFrameOutputNode();
             inputNode.AddOutgoingConnection(frameOutputNode);
-            inputNode.AddOutgoingConnection(outputNode);
+            //inputNode.AddOutgoingConnection(outputNode);
             cube.SetSpeedStripLedColors(LedColorLists.rainbowColors);
             audioGraph.QuantumProcessed += AudioGraph_QuantumProcessed;
             audioGraph.UnrecoverableErrorOccurred += AudioGraph_UnrecoverableErrorOccurred;
             audioGraph.Start();
-            outputNode.Start();
+            //outputNode.Start();
             inputNode.Start();
             frameOutputNode.Start();
             cube.Reset();
@@ -558,7 +567,7 @@ namespace TheBox
         {
             AudioFrame audioFrame = frameOutputNode.GetFrame();
             List<float[]> amplitudeData = ProcessFrameOutput(audioFrame);
-            List<float[]> channelData = GetFftData(ConvertTo512(amplitudeData));
+            List<float[]> channelData = GetFftData(ConvertToX(amplitudeData, desiredNumberOfSamples));
             for (int i = 0; i < channelData.Count / 2; i++)
             {
                 float[] leftChannel = channelData[i];
@@ -778,28 +787,43 @@ namespace TheBox
             cube.Update();
         }
 
-        List<float[]> ConvertTo512(List<float[]> channelData)
+        List<float[]> ConvertToX(List<float[]> channelData, int numberOfSamples)
         {
             List<float[]> newChannelData = new List<float[]>();
             float[] leftChannel = channelData[0];
             float[] rightChannel = channelData[1];
-            for (int i = 0; i < leftChannel.Length / audioGraph.SamplesPerQuantum; i++)
+            if (numberOfSamples > leftChannel.Length)
             {
-                float[] tmpLeftChannelData = new float[512];
-                float[] tmpRightChannelData = new float[512];
-
-                // copy the left and right channel data into a new array
-                for (int j = i * audioGraph.SamplesPerQuantum; j < (i + 1) * audioGraph.SamplesPerQuantum; j++)
+                for (int i = 0; i < leftChannel.Length / audioGraph.SamplesPerQuantum; i++)
                 {
-                    tmpLeftChannelData[j % audioGraph.SamplesPerQuantum] = leftChannel[j];
-                    tmpRightChannelData[j % audioGraph.SamplesPerQuantum] = rightChannel[j];
+                    float[] tmpLeftChannelData = new float[numberOfSamples];
+                    float[] tmpRightChannelData = new float[numberOfSamples];
+
+                    // copy the left and right channel data into a new array
+                    for (int j = i * audioGraph.SamplesPerQuantum; j < (i + 1) * audioGraph.SamplesPerQuantum; j++)
+                    {
+                        tmpLeftChannelData[j % audioGraph.SamplesPerQuantum] = leftChannel[j];
+                        tmpRightChannelData[j % audioGraph.SamplesPerQuantum] = rightChannel[j];
+                    }
+
+                    // then pad the rest with 0s till we get to the desired number of samples
+                    for (int j = audioGraph.SamplesPerQuantum; j < numberOfSamples; j++)
+                    {
+                        tmpLeftChannelData[j] = 0;
+                        tmpRightChannelData[j] = 0;
+                    }
+                    newChannelData.Add(tmpLeftChannelData);
+                    newChannelData.Add(tmpRightChannelData);
                 }
-
-                // then pad the rest with 0s till we get to 512
-                for (int j = audioGraph.SamplesPerQuantum; j < 512; j++)
+            }
+            else
+            {
+                float[] tmpLeftChannelData = new float[numberOfSamples];
+                float[] tmpRightChannelData = new float[numberOfSamples];
+                for (int i = 0; i < leftChannel.Length / numberOfSamples; i++)
                 {
-                    tmpLeftChannelData[j] = 0;
-                    tmpRightChannelData[j] = 0;
+                    tmpLeftChannelData[i] = HelperMethods.Average(leftChannel, i * numberOfSamples, (i + 1) * numberOfSamples);
+                    tmpRightChannelData[i] = HelperMethods.Average(rightChannel, i * numberOfSamples, (i + 1) * numberOfSamples);
                 }
                 newChannelData.Add(tmpLeftChannelData);
                 newChannelData.Add(tmpRightChannelData);
