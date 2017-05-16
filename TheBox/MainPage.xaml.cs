@@ -209,7 +209,13 @@ namespace TheBox
             // Set up LED strips
             await leftStrip.Begin();
             //await rightStrip.Begin();
-            leftStrip.ResetPixels(Colors.Blue);
+            leftStrip.strip[0] = Colors.Red;
+            leftStrip.strip[1] = Colors.Red;
+            leftStrip.strip[2] = Colors.Green;
+            leftStrip.strip[3] = Colors.Green;
+            leftStrip.strip[4] = Colors.Blue;
+            leftStrip.strip[5] = Colors.Blue;
+            leftStrip.strip[6] = Colors.Blue;
             leftStrip.SendPixels();
             //await AudioTest();
             AudioGraphSettings audioGraphSettings = new AudioGraphSettings(AudioRenderCategory.Media);
@@ -437,6 +443,7 @@ namespace TheBox
                     adjustableMaxes[j].Value = leftChannel[j];
                 }
 
+                // This visualizes music using rectangles
                 Task t = Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
                 {
                     for (int j = 0; j < rectangles.Count; j++)
@@ -446,6 +453,17 @@ namespace TheBox
                     }
                 }).AsTask();
                 t.Wait();
+
+                // then for each LED on our strip (mine has 7) update the
+                // brightness of the LED using the values from our
+                // adjustable max
+                for (int j = 0; j < leftStrip.PixelCount; j++)
+                {
+                    Color c = leftStrip.strip[j];
+                    c.A = (byte)(adjustableMaxes[j].Value * 255);
+                    leftStrip.strip[j] = c;
+                }
+                leftStrip.SendPixels();
             }
         }
 
