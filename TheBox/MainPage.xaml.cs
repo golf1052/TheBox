@@ -116,6 +116,9 @@ namespace TheBox
             }
         }
 
+        List<Rectangle> rectangles;
+        List<AdjustableMax> adjustableMaxes;
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -133,6 +136,33 @@ namespace TheBox
             idleChangeTime = TimeSpan.FromSeconds(30);
             Idle = false;
             runningIdleAnimation = false;
+
+            rectangles = new List<Rectangle>(desiredNumberOfSamples / 2);
+            adjustableMaxes = new List<AdjustableMax>(desiredNumberOfSamples / 2);
+            for (int i = 0; i < desiredNumberOfSamples / 2; i++)
+            {
+                Rectangle rect = new Rectangle();
+                if (i < 2)
+                {
+                    rect.Fill = new SolidColorBrush(Colors.Red);
+                }
+                else if (i < 5)
+                {
+                    rect.Fill = new SolidColorBrush(Colors.Green);
+                }
+                else
+                {
+                    rect.Fill = new SolidColorBrush(Colors.CornflowerBlue);
+                }
+                rect.HorizontalAlignment = HorizontalAlignment.Left;
+                rect.VerticalAlignment = VerticalAlignment.Bottom;
+                rect.Width = 8;
+                rect.Height = 0;
+                rect.Margin = new Thickness(i * 8, 0, 0, 0);
+                rectangleGrid.Children.Add(rect);
+                rectangles.Add(rect);
+                adjustableMaxes.Add(new AdjustableMax());
+            }
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -186,7 +216,7 @@ namespace TheBox
             audioGraphSettings.DesiredSamplesPerQuantum = 128;
             audioGraphSettings.DesiredRenderDeviceAudioProcessing = AudioProcessing.Default;
             audioGraphSettings.QuantumSizeSelectionMode = QuantumSizeSelectionMode.ClosestToDesired;
-            //audioGraphSettings.PrimaryRenderDevice = raspiAudioOutput;
+            audioGraphSettings.PrimaryRenderDevice = raspiAudioOutput;
             CreateAudioGraphResult audioGraphResult = await AudioGraph.CreateAsync(audioGraphSettings);
             if (audioGraphResult.Status != AudioGraphCreationStatus.Success)
             {
@@ -395,77 +425,28 @@ namespace TheBox
             AudioFrame audioFrame = frameOutputNode.GetFrame();
             List<float[]> amplitudeData = ProcessFrameOutput(audioFrame);
             List<float[]> channelData = GetFftData(ConvertToX(amplitudeData, desiredNumberOfSamples));
-            if (channelData != null)
+            for (int i = 0; i < channelData.Count / 2; i++)
             {
-                for (int i = 0; i < channelData.Count / 2; i++)
+                float[] leftChannel = channelData[i];
+                float[] rightChannel = channelData[i + 1];
+
+                // First update the adjustable max
+                // here we are only using the left channel at the moment
+                for (int j = 0; j < adjustableMaxes.Count; j++)
                 {
-                    float[] leftChannel = channelData[i];
-                    float[] rightChannel = channelData[i + 1];
-                    float average = HelperMethods.Average(leftChannel);
-                    //CheckForIdle(average);
-                    //if (!Idle)
-                    //{
-                    //    if (currentMode == ActiveModes.Volumes)
-                    //    {
-                    //        LowMidHighVolumeBars(leftChannel, rightChannel);
-                    //    }
-                    //    else
-                    //    {
-                    //        LowMidHighSpeedBars(leftChannel, rightChannel);
-                    //    }
-                    //}
-                    //else
-                    //{
-                    //    if (!runningIdleAnimation)
-                    //    {
-                    //        Brightness = 127;
-                    //        UpdateSliderBrightness();
-                    //        if (idleMode == IdleModes.Rainbow)
-                    //        {
-                    //            await RainbowTest(average);
-                    //        }
-                    //        else if (idleMode == IdleModes.Flair)
-                    //        {
-                    //            Flair(average);
-                    //        }
-                    //    }
-                    //}
+                    adjustableMaxes[j].Value = leftChannel[j];
                 }
+
+                Task t = Windows.ApplicationModel.Core.CoreApplication.MainView.CoreWindow.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                {
+                    for (int j = 0; j < rectangles.Count; j++)
+                    {
+                        var height = Math.Abs(adjustableMaxes[j].Value);
+                        rectangles[j].Height = height * 500;
+                    }
+                }).AsTask();
+                t.Wait();
             }
-            //if (AutoCycle && !Idle)
-            //{
-            //    if (DateTime.UtcNow - lastChange >= changeTime)
-            //    {
-            //        int randomPattern = random.Next(5);
-            //        while (randomPattern == previousPatternValue)
-            //        {
-            //            randomPattern = random.Next(5);
-            //        }
-            //        previousPatternValue = randomPattern;
-            //        lastChange = DateTime.UtcNow;
-            //        if (randomPattern == 0)
-            //        {
-            //            volumesButton_Click(null, null);
-            //        }
-            //        else if (randomPattern == 1)
-            //        {
-            //            speedRainbowButton_Click(null, null);
-            //        }
-            //        else if (randomPattern == 2)
-            //        {
-            //            speedAlternatingButton_Click(null, null);
-            //        }
-            //        else if (randomPattern == 3)
-            //        {
-            //            speedSingleButton_Click(null, null);
-            //        }
-            //        else if (randomPattern == 4)
-            //        {
-            //            speedTriRainbowButton_Click(null, null);
-            //        }
-            //        ChangeReverse();
-            //    }
-            //}
         }
 
         private void ChangeIdleMode()

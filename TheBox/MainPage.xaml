@@ -48,5 +48,6 @@
                 <CheckBox x:Name="reverseCheckbox" Content="Reverse" Grid.Column="1" HorizontalAlignment="Center" Margin="10" VerticalAlignment="Center" Click="reverseCheckbox_Click"/>
             </Grid>
         </Grid>
+        <Grid x:Name="rectangleGrid" Grid.ColumnSpan="2"/>
     </Grid>
 </Page>
