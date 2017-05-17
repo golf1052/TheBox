@@ -36,7 +36,7 @@ namespace TheBox
     public sealed partial class MainPage : Page
     {
         // this should be double the number of desired samples
-        const int desiredNumberOfSamples = 16;
+        const int desiredNumberOfSamples = 32;
 
         int[] rainbow = {
             0xFF0000, 0xD52A00, 0xAB5500, 0xAB7F00,
@@ -599,10 +599,11 @@ namespace TheBox
                     float[] tmpLeftChannelData = new float[numberOfSamples];
                     float[] tmpRightChannelData = new float[numberOfSamples];
 
+                    int samplesToAverage = audioGraph.SamplesPerQuantum / numberOfSamples;
                     for (int j = 0; j < numberOfSamples; j++)
                     {
-                        tmpLeftChannelData[j] = HelperMethods.Average(leftChannel, j * numberOfSamples + audioGraph.SamplesPerQuantum * i, (j + 1) * numberOfSamples + audioGraph.SamplesPerQuantum * i);
-                        tmpRightChannelData[j] = HelperMethods.Average(rightChannel, j * numberOfSamples + audioGraph.SamplesPerQuantum * i, (j + 1) * numberOfSamples + audioGraph.SamplesPerQuantum * i);
+                        tmpLeftChannelData[j] = HelperMethods.Average(leftChannel, j * samplesToAverage + audioGraph.SamplesPerQuantum * i, (j + 1) * samplesToAverage + audioGraph.SamplesPerQuantum * i);
+                        tmpRightChannelData[j] = HelperMethods.Average(rightChannel, j * samplesToAverage + audioGraph.SamplesPerQuantum * i, (j + 1) * samplesToAverage + audioGraph.SamplesPerQuantum * i);
                     }
                     newChannelData.Add(tmpLeftChannelData);
                     newChannelData.Add(tmpRightChannelData);
